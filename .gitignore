@@ -1,0 +1,12 @@
+node_modules/
+dist/
+data/
+uploads/pets/
+.env
+.env.local
+*.log
+.DS_Store
+.vite/
+
+# 课程作业文档，不随项目提交
+作业要求.docx
