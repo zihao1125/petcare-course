@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { api } from '../../api';
+import ImageDropzone from '../../components/ImageDropzone';
 import {
   btnGhost,
   btnPrimary,
-  btnSecondary,
   Card,
   Empty,
   ErrorText,
@@ -12,7 +12,7 @@ import {
   Modal,
   SectionTitle
 } from '../../components/ui';
-import { fmtDate, fmtMoney, today } from '../../utils';
+import { dateError, fmtDate, fmtMoney, today } from '../../utils';
 import type { PetDetailData, Visit } from '../../types';
 
 const emptyForm = {
@@ -52,6 +52,11 @@ export default function VisitsTab({
       setError('请选择就诊日期');
       return;
     }
+    const dateMsg = dateError(form.visit_date, '就诊日期', true) || dateError(form.followup_date, '复诊日期');
+    if (dateMsg) {
+      setError(dateMsg);
+      return;
+    }
     setBusy(true);
     try {
       await api(`/pets/${petId}/visits`, {
@@ -82,12 +87,12 @@ export default function VisitsTab({
     }
   };
 
-  const upload = async (visitId: number, files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  const upload = async (visitId: number, files: File[]) => {
+    if (files.length === 0) return;
     setUploadingId(visitId);
     try {
       const fd = new FormData();
-      Array.from(files).forEach((f) => fd.append('files', f));
+      files.forEach((f) => fd.append('files', f));
       await api(`/pets/${petId}/visits/${visitId}/images`, { method: 'POST', form: fd });
       await reload();
     } catch (err) {
@@ -172,25 +177,9 @@ export default function VisitsTab({
                 </dl>
 
                 <div className="mt-3">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium text-slate-500">检查报告（{visit.images?.length || 0}）</span>
-                    <label className={`${btnSecondary} cursor-pointer px-3 py-1 text-xs`}>
-                      {uploadingId === visit.id ? '上传中…' : '上传图片'}
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        disabled={uploadingId === visit.id}
-                        onChange={(e) => {
-                          upload(visit.id, e.target.files);
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
-                  </div>
+                  <p className="mb-2 text-xs font-medium text-slate-500">检查报告（{visit.images?.length || 0}）</p>
                   {visit.images && visit.images.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
                       {visit.images.map((img) => (
                         <div key={img.id} className="group relative overflow-hidden rounded-lg border border-slate-200">
                           <a href={img.file_path} target="_blank" rel="noreferrer">
@@ -207,6 +196,15 @@ export default function VisitsTab({
                       ))}
                     </div>
                   )}
+                  <ImageDropzone
+                    compact
+                    multiple
+                    maxFiles={6}
+                    disabled={uploadingId === visit.id}
+                    title={uploadingId === visit.id ? '上传中…' : '拖拽检查报告到这里，或点击选择'}
+                    hint="支持 JPG / PNG / WEBP，单张不超过 5MB，一次最多 6 张"
+                    onFiles={(files) => upload(visit.id, files)}
+                  />
                 </div>
               </article>
             ))}

@@ -19,10 +19,26 @@ export function optionalText(value, max = 2000) {
   return v;
 }
 
+export function isRealDate(value) {
+  const matched = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!matched) return false;
+  const year = Number(matched[1]);
+  const month = Number(matched[2]);
+  const day = Number(matched[3]);
+  if (month < 1 || month > 12 || day < 1) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
 export function requiredDate(value, label) {
   const v = text(value);
   if (!v) throw new HttpError(400, `${label}不能为空`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new HttpError(400, `${label}格式应为 YYYY-MM-DD`);
+  if (!isRealDate(v)) throw new HttpError(400, `${label}不是有效日期，请检查年月日`);
   return v;
 }
 
@@ -30,6 +46,7 @@ export function optionalDate(value, label) {
   const v = text(value);
   if (!v) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new HttpError(400, `${label}格式应为 YYYY-MM-DD`);
+  if (!isRealDate(v)) throw new HttpError(400, `${label}不是有效日期，请检查年月日`);
   return v;
 }
 

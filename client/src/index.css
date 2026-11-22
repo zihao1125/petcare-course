@@ -1,7 +1,33 @@
 @import "tailwindcss";
 
+/*
+ * 暖色主题：沿用 teal-* / slate-* 类名作为设计令牌，
+ * 在此统一覆盖为奶油、焦糖与暖棕色调，避免逐页改类名造成遗漏。
+ */
 @theme {
   --font-sans: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+
+  --color-teal-50: #fff7ed;
+  --color-teal-100: #ffedd5;
+  --color-teal-200: #fed7aa;
+  --color-teal-300: #fdba74;
+  --color-teal-400: #fb923c;
+  --color-teal-500: #f97316;
+  --color-teal-600: #ea580c;
+  --color-teal-700: #c2410c;
+  --color-teal-800: #9a3412;
+  --color-teal-900: #7c2d12;
+
+  --color-slate-50: #faf6f0;
+  --color-slate-100: #f3ece2;
+  --color-slate-200: #e8ddd0;
+  --color-slate-300: #d9c9b8;
+  --color-slate-400: #b3a08e;
+  --color-slate-500: #8f7a66;
+  --color-slate-600: #6f5c4a;
+  --color-slate-700: #554537;
+  --color-slate-800: #3d3128;
+  --color-slate-900: #2b221c;
 }
 
 html,
@@ -11,10 +37,19 @@ body,
 }
 
 body {
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: #fff9f2;
+  background-image:
+    radial-gradient(circle at 12% 0%, rgba(251, 146, 60, 0.1), transparent 42%),
+    radial-gradient(circle at 88% 6%, rgba(244, 114, 182, 0.07), transparent 38%);
+  background-attachment: fixed;
+  color: #2b221c;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #fed7aa;
+  color: #7c2d12;
 }
 
 /* 手机端底部导航留白 */

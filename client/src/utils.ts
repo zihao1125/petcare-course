@@ -9,6 +9,28 @@ export function today() {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
+export function isRealDate(value: string) {
+  const matched = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!matched) return false;
+  const year = Number(matched[1]);
+  const month = Number(matched[2]);
+  const day = Number(matched[3]);
+  if (month < 1 || month > 12 || day < 1) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+export function dateError(value: string, label: string, required = false): string | null {
+  if (!value) return required ? `${label}不能为空` : null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return `${label}格式应为 YYYY-MM-DD`;
+  if (!isRealDate(value)) return `${label}不是有效日期，请检查年月日`;
+  return null;
+}
+
 export function ageText(birthday?: string | null) {
   if (!birthday) return '生日未填写';
   const birth = new Date(`${birthday}T00:00:00`);

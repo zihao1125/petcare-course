@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../api';
+import ImageDropzone from '../../components/ImageDropzone';
 import {
   btnGhost,
-  btnPrimary,
   Card,
   Empty,
   ErrorText,
@@ -23,11 +23,21 @@ export default function PhotosTab({
   reload: () => Promise<void>;
 }) {
   const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState('');
   const [caption, setCaption] = useState('');
   const [tags, setTags] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setPreview('');
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +56,6 @@ export default function PhotosTab({
       setFile(null);
       setCaption('');
       setTags('');
-      if (fileInputRef.current) fileInputRef.current.value = '';
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : '上传失败');
@@ -69,28 +78,45 @@ export default function PhotosTab({
     <div className="space-y-4">
       <Card>
         <SectionTitle>上传生活照</SectionTitle>
-        <form onSubmit={submit} className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
-          <Field label="图片" required>
-            <input
-              id="photo-file"
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="w-full text-sm text-slate-600"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-            />
-          </Field>
-          <Field label="文字说明">
-            <input className={inputCls} value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="例如：第一次洗澡" />
-          </Field>
-          <Field label="标签">
-            <input className={inputCls} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="逗号分隔，如：日常,玩耍" />
-          </Field>
-          <button type="submit" className={btnPrimary} disabled={busy}>
-            {busy ? '上传中…' : '上传'}
-          </button>
+        <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
+          <ImageDropzone
+            onFiles={(files) => setFile(files[0])}
+            preview={preview || undefined}
+            onClear={() => setFile(null)}
+            title="把它的可爱瞬间拖进来"
+            hint="支持 JPG / PNG / WEBP，单张不超过 5MB"
+            previewAlt="生活照预览"
+          />
+          <div className="flex flex-col gap-3">
+            <Field label="文字说明">
+              <input
+                className={inputCls}
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="例如：第一次洗澡"
+                maxLength={200}
+              />
+            </Field>
+            <Field label="标签">
+              <input
+                className={inputCls}
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="逗号分隔，如：日常,玩耍"
+                maxLength={100}
+              />
+            </Field>
+            <ErrorText>{error}</ErrorText>
+            <button
+              type="submit"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={busy || !file}
+            >
+              {busy ? '上传中…' : '上传这张生活照'}
+            </button>
+            <p className="text-xs text-slate-400">支持点击选择或直接把图片拖入左侧区域</p>
+          </div>
         </form>
-        <ErrorText>{error}</ErrorText>
       </Card>
 
       <Card>

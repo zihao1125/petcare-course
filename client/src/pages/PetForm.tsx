@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
+import ImageDropzone from '../components/ImageDropzone';
 import {
   btnDanger,
   btnPrimary,
@@ -13,6 +14,7 @@ import {
   SectionTitle,
   Spinner
 } from '../components/ui';
+import { dateError } from '../utils';
 import type { Pet } from '../types';
 
 const emptyForm = {
@@ -29,13 +31,21 @@ export default function PetForm() {
   const { id } = useParams();
   const editing = Boolean(id);
   const navigate = useNavigate();
+  const location = useLocation();
+  const flash = (location.state as { avatarError?: string } | null)?.avatarError;
+
   const [form, setForm] = useState({ ...emptyForm });
   const [pet, setPet] = useState<Pet | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [preview, setPreview] = useState('');
+  const [avatarNotice, setAvatarNotice] = useState(flash || '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    if (flash) setAvatarNotice(flash);
+  }, [flash]);
 
   useEffect(() => {
     if (!id) return;
@@ -76,26 +86,49 @@ export default function PetForm() {
       setError('请填写宠物昵称');
       return;
     }
+    const birthdayError = dateError(form.birthday, '生日');
+    if (birthdayError) {
+      setError(birthdayError);
+      return;
+    }
+
     setBusy(true);
+    let targetId: string | null = id || null;
     try {
       const payload = {
         ...form,
         breed: form.breed.trim() || null,
         birthday: form.birthday || null
       };
-      let petId = id;
+
       if (editing) {
         await api(`/pets/${id}`, { method: 'PUT', body: payload });
       } else {
         const created = await api<{ pet: Pet }>('/pets', { method: 'POST', body: payload });
-        petId = String(created.pet.id);
+        targetId = String(created.pet.id);
       }
-      if (avatarFile && petId) {
+
+      if (!targetId) throw new Error('宠物档案保存失败');
+
+      if (avatarFile) {
         const fd = new FormData();
         fd.append('file', avatarFile);
-        await api(`/pets/${petId}/avatar`, { method: 'POST', form: fd });
+        try {
+          await api(`/pets/${targetId}/avatar`, { method: 'POST', form: fd });
+        } catch (avatarErr) {
+          const reason = avatarErr instanceof Error ? avatarErr.message : '上传失败';
+          // 档案已经落库：跳到该宠物的编辑页重试头像，避免再次点击保存时重复建档
+          navigate(`/pets/${targetId}/edit`, {
+            replace: true,
+            state: {
+              avatarError: `档案已保存，但头像上传失败：${reason}。请重新选择头像后保存，不会重复创建宠物。`
+            }
+          });
+          return;
+        }
       }
-      navigate(`/pets/${petId}`, { replace: true });
+
+      navigate(`/pets/${targetId}`, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存失败');
     } finally {
@@ -124,29 +157,30 @@ export default function PetForm() {
         <p className="mt-1 text-sm text-slate-500">档案信息用于生成年龄、性别等基础展示</p>
       </div>
 
+      {avatarNotice && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-800">
+          {avatarNotice}
+        </div>
+      )}
+
       <Card>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-teal-50 text-2xl font-semibold text-teal-700">
-              {preview ? <img src={preview} alt="头像预览" className="h-full w-full object-cover" /> : form.name.slice(0, 1) || '宠'}
-            </div>
-            <div>
-              <label className={btnSecondary + ' cursor-pointer'}>
-                选择头像
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={(e) => setAvatarFile(e.target.files?.[0] || null)}
-                />
-              </label>
-              <p className="mt-1 text-xs text-slate-400">支持 JPG/PNG/WEBP，最大 5MB</p>
-            </div>
-          </div>
+          <SectionTitle>宠物头像</SectionTitle>
+          <ImageDropzone
+            onFiles={(files) => {
+              setAvatarFile(files[0]);
+              setAvatarNotice('');
+            }}
+            preview={preview || undefined}
+            onClear={avatarFile ? () => setAvatarFile(null) : undefined}
+            title="点击或拖拽上传宠物头像"
+            hint="支持 JPG / PNG / WEBP，单张不超过 5MB"
+            previewAlt="头像预览"
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="昵称" required>
-              <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="例如：豆豆" maxLength={30} />
+              <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="例如：团团" maxLength={30} />
             </Field>
             <Field label="宠物类型" required>
               <div className="grid grid-cols-2 gap-2">
@@ -217,7 +251,7 @@ export default function PetForm() {
                 取消
               </button>
               <button type="submit" className={btnPrimary} disabled={busy}>
-                {busy ? '保存中…' : '保存'}
+                {busy ? '保存中…' : editing ? '保存修改' : '保存并创建档案'}
               </button>
             </div>
           </div>

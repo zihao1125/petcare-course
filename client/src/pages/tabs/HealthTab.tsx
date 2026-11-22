@@ -20,7 +20,7 @@ import {
   Modal,
   SectionTitle
 } from '../../components/ui';
-import { fmtDate, today } from '../../utils';
+import { dateError, fmtDate, today } from '../../utils';
 import type { HealthRecord, PetDetailData, WeightRecord } from '../../types';
 
 const emptyHealth = {
@@ -83,6 +83,11 @@ export default function HealthTab({
       setWeightError('请填写体重');
       return;
     }
+    const dateMsg = dateError(weightForm.record_date, '记录日期', true);
+    if (dateMsg) {
+      setWeightError(dateMsg);
+      return;
+    }
     setWeightBusy(true);
     try {
       await api(`/pets/${petId}/weights`, {
@@ -115,6 +120,11 @@ export default function HealthTab({
   const submitHealth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const dateMsg = dateError(form.record_date, '记录日期', true);
+    if (dateMsg) {
+      setError(dateMsg);
+      return;
+    }
     setBusy(true);
     try {
       await api(`/pets/${petId}/health`, {

@@ -12,7 +12,7 @@ import {
   Modal,
   SectionTitle
 } from '../../components/ui';
-import { daysUntil, dueInfo, fmtDate, today } from '../../utils';
+import { dateError, daysUntil, dueInfo, fmtDate, today } from '../../utils';
 import type { Deworming, PetDetailData, Vaccination } from '../../types';
 
 export default function PreventionTab({
@@ -41,6 +41,11 @@ export default function PreventionTab({
       setVaccError('请填写疫苗名称');
       return;
     }
+    const dateMsg = dateError(vaccForm.date, '接种日期', true) || dateError(vaccForm.next_due_date, '下次到期日期');
+    if (dateMsg) {
+      setVaccError(dateMsg);
+      return;
+    }
     setVaccBusy(true);
     try {
       await api(`/pets/${petId}/vaccinations`, {
@@ -62,6 +67,11 @@ export default function PreventionTab({
     setWormError('');
     if (!wormForm.type.trim()) {
       setWormError('请填写驱虫类型');
+      return;
+    }
+    const dateMsg = dateError(wormForm.date, '驱虫日期', true) || dateError(wormForm.next_due_date, '下次到期日期');
+    if (dateMsg) {
+      setWormError(dateMsg);
       return;
     }
     setWormBusy(true);

@@ -11,7 +11,7 @@ import {
   Modal,
   SectionTitle
 } from '../../components/ui';
-import { fmtDate, today } from '../../utils';
+import { dateError, fmtDate, today } from '../../utils';
 import type { Medication, PetDetailData } from '../../types';
 
 const emptyForm = { name: '', dosage: '', frequency: '', start_date: '', end_date: '', note: '' };
@@ -37,6 +37,15 @@ export default function MedicationsTab({
     setError('');
     if (!form.name.trim()) {
       setError('请填写药品名称');
+      return;
+    }
+    const dateMsg = dateError(form.start_date, '开始日期') || dateError(form.end_date, '结束日期');
+    if (dateMsg) {
+      setError(dateMsg);
+      return;
+    }
+    if (form.start_date && form.end_date && form.end_date < form.start_date) {
+      setError('结束日期不能早于开始日期');
       return;
     }
     setBusy(true);
