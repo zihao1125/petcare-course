@@ -10,7 +10,7 @@ const router = express.Router();
 router.use(requireAuth, requireRole('admin'));
 
 function findUser(id) {
-  const user = get("SELECT id, username, role, status, created_at FROM users WHERE id = ? AND role = 'user'", [id]);
+  const user = get("SELECT id, account, username, role, status, created_at FROM users WHERE id = ? AND role = 'user'", [id]);
   if (!user) throw new HttpError(404, '用户不存在');
   return user;
 }
@@ -58,15 +58,14 @@ router.get('/users', (req, res) => {
   const q = text(req.query.q);
   const like = `%${q}%`;
   const users = all(
-    `SELECT u.id, u.username, u.status, u.created_at,
-       (SELECT COUNT(*) FROM pets p WHERE p.user_id = u.id) AS pet_count,
-       (SELECT COUNT(*) FROM users) AS _ignored
+    `SELECT u.id, u.account, u.username, u.status, u.created_at,
+       (SELECT COUNT(*) FROM pets p WHERE p.user_id = u.id) AS pet_count
      FROM users u
-     WHERE u.role = 'user' AND (? = '' OR u.username LIKE ?)
+     WHERE u.role = 'user' AND (? = '' OR u.account LIKE ? OR u.username LIKE ?)
      ORDER BY u.id DESC`,
-    [q, like]
+    [q, like, like]
   );
-  res.json({ users: users.map(({ _ignored, ...u }) => u) });
+  res.json({ users });
 });
 
 router.get('/users/:id', (req, res) => {

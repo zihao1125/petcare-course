@@ -2,27 +2,38 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { btnPrimary, ErrorText, Field, inputCls, Spinner } from '../components/ui';
-import type { Role } from '../types';
+import type { Role, User } from '../types';
 
 export default function Login() {
   const { user, loading, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const rawFrom = (location.state as { from?: string } | null)?.from;
+  const state = location.state as { from?: string; notice?: string } | null;
+  const rawFrom = state?.from;
   const from = rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '';
+  const notice = state?.notice || '';
   const [role, setRole] = useState<Role>('user');
-  const [username, setUsername] = useState('');
+  const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const targetFor = (nextRole: Role) => {
-    if (nextRole === 'admin') return from.startsWith('/admin') ? from : '/admin';
+  const targetFor = (nextUser: User) => {
+    if (nextUser.role === 'user' && !nextUser.profileCompleted) return '/complete-profile';
+    if (nextUser.role === 'admin') return from.startsWith('/admin') ? from : '/admin';
     return from && !from.startsWith('/admin') && !from.startsWith('/login') ? from : '/';
   };
 
+  const go = (nextUser: User) => {
+    const target = targetFor(nextUser);
+    navigate(target, {
+      replace: true,
+      state: target === '/complete-profile' ? { from: from || '/' } : undefined
+    });
+  };
+
   useEffect(() => {
-    if (!loading && user) navigate(targetFor(user.role), { replace: true });
+    if (!loading && user) go(user);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, user, navigate, from]);
 
@@ -37,14 +48,14 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!username.trim() || !password) {
-      setError('请输入用户名和密码');
+    if (!account.trim() || !password) {
+      setError('请输入账号和密码');
       return;
     }
     setBusy(true);
     try {
-      const u = await login(username.trim(), password, role);
-      navigate(targetFor(u.role), { replace: true });
+      const nextUser = await login(account.trim(), password, role);
+      go(nextUser);
     } catch (err) {
       setError(err instanceof Error ? err.message : '登录失败');
     } finally {
@@ -64,6 +75,9 @@ export default function Login() {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          {notice && (
+            <p className="mb-4 rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-800">{notice}</p>
+          )}
           <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
             {(['user', 'admin'] as Role[]).map((r) => (
               <button
@@ -83,12 +97,12 @@ export default function Login() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Field label="用户名" required>
+            <Field label="账号" required>
               <input
                 className={inputCls}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder={role === 'admin' ? '管理员账号' : '请输入用户名'}
+                value={account}
+                onChange={(e) => setAccount(e.target.value)}
+                placeholder={role === 'admin' ? '管理员账号' : '请输入账号'}
                 autoComplete="username"
               />
             </Field>
@@ -109,12 +123,23 @@ export default function Login() {
           </form>
 
           {role === 'user' ? (
-            <p className="mt-4 text-center text-sm text-slate-500">
-              还没有账号？
-              <Link to="/register" state={{ from }} className="font-medium text-teal-700 hover:text-teal-900">
-                立即注册
-              </Link>
-            </p>
+            <div className="mt-4 space-y-3 text-center text-sm text-slate-500">
+              <p>
+                还没有账号？
+                <Link to="/register" state={{ from }} className="font-medium text-teal-700 hover:text-teal-900">
+                  立即注册
+                </Link>
+              </p>
+              <p>
+                <Link
+                  to="/forgot-password"
+                  state={{ from, account: account.trim() }}
+                  className="font-medium text-teal-700 hover:text-teal-900"
+                >
+                  忘记密码？
+                </Link>
+              </p>
+            </div>
           ) : (
             <p className="mt-4 text-center text-xs text-slate-400">管理员账号由系统初始化脚本创建</p>
           )}

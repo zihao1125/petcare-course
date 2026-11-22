@@ -21,9 +21,11 @@ export function clearAuthCookie(res) {
 export function publicUser(user) {
   return {
     id: user.id,
+    account: user.account,
     username: user.username,
     role: user.role,
     status: user.status,
+    profileCompleted: user.profile_completed === 1,
     created_at: user.created_at
   };
 }
@@ -37,7 +39,10 @@ export function requireAuth(req, res, next) {
   } catch {
     return next(new HttpError(401, '登录已过期，请重新登录'));
   }
-  const user = get('SELECT id, username, role, status, created_at FROM users WHERE id = ?', [payload.uid]);
+  const user = get(
+    'SELECT id, account, username, role, status, profile_completed, created_at FROM users WHERE id = ?',
+    [payload.uid]
+  );
   if (!user) return next(new HttpError(401, '账号不存在'));
   if (user.status !== 'active') return next(new HttpError(403, '账号已被禁用'));
   req.user = user;
@@ -48,6 +53,9 @@ export function requireRole(role) {
   return (req, res, next) => {
     if (!req.user) return next(new HttpError(401, '请先登录'));
     if (req.user.role !== role) return next(new HttpError(403, '没有权限执行该操作'));
+    if (role === 'user' && req.user.profile_completed !== 1) {
+      return next(new HttpError(403, '请先完善账号与密保信息'));
+    }
     next();
   };
 }

@@ -58,10 +58,10 @@ export default function AdminDashboard() {
 
   const toggleStatus = async (user: AdminUser) => {
     const next = user.status === 'active' ? 'disabled' : 'active';
-    if (!window.confirm(`确定${next === 'disabled' ? '禁用' : '启用'}用户「${user.username}」吗？`)) return;
+    if (!window.confirm(`确定${next === 'disabled' ? '禁用' : '启用'}用户「${user.account}」吗？`)) return;
     try {
       await api(`/admin/users/${user.id}/status`, { method: 'PATCH', body: { status: next } });
-      setNotice(`已${next === 'disabled' ? '禁用' : '启用'}用户 ${user.username}`);
+      setNotice(`已${next === 'disabled' ? '禁用' : '启用'}用户 ${user.account}`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : '操作失败');
@@ -143,7 +143,7 @@ export default function AdminDashboard() {
                 load(q);
               }}
             >
-              <input className={`${inputCls} w-40 sm:w-56`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索用户名" />
+              <input className={`${inputCls} w-40 sm:w-56`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索账号或用户名" />
               <button type="submit" className={btnSecondary}>
                 搜索
               </button>
@@ -161,6 +161,7 @@ export default function AdminDashboard() {
               <table className="w-full text-left text-sm">
                 <thead className="text-xs text-slate-400">
                   <tr className="border-b border-slate-100">
+                    <th className="py-2 font-medium">账号</th>
                     <th className="py-2 font-medium">用户名</th>
                     <th className="py-2 font-medium">宠物数</th>
                     <th className="py-2 font-medium">注册时间</th>
@@ -171,7 +172,8 @@ export default function AdminDashboard() {
                 <tbody>
                   {users.map((user) => (
                     <tr key={user.id} className="border-b border-slate-50">
-                      <td className="py-2.5 font-medium text-slate-800">{user.username}</td>
+                      <td className="py-2.5 font-medium text-slate-800">{user.account}</td>
+                      <td className="py-2.5 text-slate-600">{user.username}</td>
                       <td className="py-2.5 text-slate-600">{user.pet_count}</td>
                       <td className="py-2.5 text-slate-500">{fmtDate(user.created_at)}</td>
                       <td className="py-2.5">
@@ -214,7 +216,8 @@ export default function AdminDashboard() {
                 <div key={user.id} className="rounded-xl border border-slate-200 p-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">{user.username}</p>
+                      <p className="text-sm font-semibold text-slate-800">{user.account}</p>
+                      <p className="text-xs text-slate-500">昵称：{user.username}</p>
                       <p className="text-xs text-slate-400">
                         {user.pet_count} 只宠物 · {fmtDate(user.created_at)}
                       </p>

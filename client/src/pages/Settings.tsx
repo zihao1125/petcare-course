@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, downloadExport } from '../api';
 import { useAuth } from '../auth';
@@ -11,9 +11,17 @@ import {
   ErrorText,
   Field,
   inputCls,
+  Modal,
   SectionTitle
 } from '../components/ui';
+import { DEFAULT_QUESTION_KEYS, SECURITY_QUESTIONS, securityQuestionLabel } from '../securityQuestions';
 import { fmtDate } from '../utils';
+import type { SecurityQuestion } from '../types';
+
+interface SecurityFormItem {
+  key: string;
+  answer: string;
+}
 
 function Notice({ kind, text }: { kind: 'ok' | 'err'; text: string }) {
   return (
@@ -39,6 +47,73 @@ export default function Settings() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  const [securityQuestions, setSecurityQuestions] = useState<SecurityQuestion[]>([]);
+  const [securityLoaded, setSecurityLoaded] = useState(false);
+  const [securityOpen, setSecurityOpen] = useState(false);
+  const [securityPassword, setSecurityPassword] = useState('');
+  const [securityForm, setSecurityForm] = useState<SecurityFormItem[]>(
+    DEFAULT_QUESTION_KEYS.map((key) => ({ key, answer: '' }))
+  );
+  const [securityError, setSecurityError] = useState('');
+  const [securityBusy, setSecurityBusy] = useState(false);
+  const [securityNotice, setSecurityNotice] = useState('');
+
+  useEffect(() => {
+    if (!user || user.role === 'admin') {
+      setSecurityLoaded(true);
+      return;
+    }
+    api<{ questions: SecurityQuestion[] }>('/auth/security-questions/me')
+      .then((data) => setSecurityQuestions(data.questions))
+      .catch(() => setSecurityQuestions([]))
+      .finally(() => setSecurityLoaded(true));
+  }, [user]);
+
+  const openSecurityModal = () => {
+    const keys =
+      securityQuestions.length === 3
+        ? securityQuestions.map((q) => q.key)
+        : [...DEFAULT_QUESTION_KEYS];
+    setSecurityForm(keys.map((key) => ({ key, answer: '' })));
+    setSecurityPassword('');
+    setSecurityError('');
+    setSecurityOpen(true);
+  };
+
+  const saveSecurityQuestions = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSecurityError('');
+    if (!securityPassword) {
+      setSecurityError('请输入当前登录密码');
+      return;
+    }
+    if (new Set(securityForm.map((item) => item.key)).size !== 3) {
+      setSecurityError('3 个密保问题不能重复');
+      return;
+    }
+    if (securityForm.some((item) => !item.answer.trim())) {
+      setSecurityError('请回答全部 3 个密保问题');
+      return;
+    }
+    setSecurityBusy(true);
+    try {
+      const data = await api<{ questions: SecurityQuestion[] }>('/auth/security-questions/me', {
+        method: 'PUT',
+        body: {
+          password: securityPassword,
+          questions: securityForm.map((item) => ({ key: item.key, answer: item.answer.trim() }))
+        }
+      });
+      setSecurityQuestions(data.questions);
+      setSecurityOpen(false);
+      setSecurityNotice('密保问题已保存');
+    } catch (err) {
+      setSecurityError(err instanceof Error ? err.message : '保存失败');
+    } finally {
+      setSecurityBusy(false);
+    }
+  };
 
   const changePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +179,11 @@ export default function Settings() {
         <SectionTitle>账号信息</SectionTitle>
         <dl className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <dt className="text-xs text-slate-400">用户名</dt>
+            <dt className="text-xs text-slate-400">账号（登录用）</dt>
+            <dd className="mt-0.5 font-medium text-slate-800">{user?.account || user?.username}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-slate-400">用户名（昵称）</dt>
             <dd className="mt-0.5 font-medium text-slate-800">{user?.username}</dd>
           </div>
           <div>
@@ -173,6 +252,48 @@ export default function Settings() {
         </form>
       </Card>
 
+      {!isAdmin && (
+        <Card>
+          <SectionTitle
+            action={
+              securityLoaded && (
+                <button type="button" className={btnSecondary} onClick={openSecurityModal}>
+                  {securityQuestions.length === 3 ? '更新密保问题' : '设置密保问题'}
+                </button>
+              )
+            }
+          >
+            密保问题
+          </SectionTitle>
+          {!securityLoaded ? (
+            <p className="text-sm text-slate-400">加载中…</p>
+          ) : securityQuestions.length === 3 ? (
+            <div className="space-y-2">
+              {securityQuestions.map((question, index) => (
+                <div
+                  key={question.key}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2 text-sm"
+                >
+                  <span className="text-slate-700">
+                    {index + 1}. {securityQuestionLabel(question.key)}
+                  </span>
+                  <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700">已设置</span>
+                </div>
+              ))}
+              <p className="text-xs text-slate-400">忘记密码时需回答以上 3 个问题；答案只保存加密结果。</p>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-amber-50 px-3 py-3 text-sm text-amber-800">
+              <p>尚未设置密保问题，当前无法通过密保找回密码。</p>
+              <button type="button" className={`${btnPrimary} mt-2`} onClick={openSecurityModal}>
+                立即设置
+              </button>
+            </div>
+          )}
+          {securityNotice && <p className="mt-2 rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-800">{securityNotice}</p>}
+        </Card>
+      )}
+
       <Card>
         <SectionTitle>我的数据</SectionTitle>
         {isAdmin ? (
@@ -237,6 +358,72 @@ export default function Settings() {
         onCancel={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
       />
+
+      <Modal
+        open={securityOpen}
+        title={securityQuestions.length === 3 ? '更新密保问题' : '设置密保问题'}
+        onClose={() => setSecurityOpen(false)}
+        wide
+        footer={
+          <>
+            <button type="button" className={btnSecondary} onClick={() => setSecurityOpen(false)} disabled={securityBusy}>
+              取消
+            </button>
+            <button type="submit" form="security-form" className={btnPrimary} disabled={securityBusy}>
+              {securityBusy ? '保存中…' : '保存'}
+            </button>
+          </>
+        }
+      >
+        <form id="security-form" onSubmit={saveSecurityQuestions} className="space-y-3">
+          <Field label="当前登录密码" required hint="修改密保问题需要验证当前密码">
+            <input
+              type="password"
+              className={inputCls}
+              value={securityPassword}
+              onChange={(e) => setSecurityPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </Field>
+          {securityForm.map((item, index) => (
+            <div key={index} className="grid gap-2 rounded-xl border border-slate-200 p-3 sm:grid-cols-2">
+              <Field label={`密保问题 ${index + 1}`} required>
+                <select
+                  className={inputCls}
+                  value={item.key}
+                  onChange={(e) => {
+                    const key = e.target.value;
+                    setSecurityForm((prev) => prev.map((q, i) => (i === index ? { ...q, key } : q)));
+                    setSecurityError('');
+                  }}
+                >
+                  {SECURITY_QUESTIONS.map((question) => (
+                    <option key={question.key} value={question.key}>
+                      {question.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="答案" required>
+                <input
+                  className={inputCls}
+                  value={item.answer}
+                  onChange={(e) =>
+                    setSecurityForm((prev) =>
+                      prev.map((q, i) => (i === index ? { ...q, answer: e.target.value } : q))
+                    )
+                  }
+                  placeholder="填写你的答案"
+                  maxLength={100}
+                  autoComplete="off"
+                />
+              </Field>
+            </div>
+          ))}
+          <p className="text-xs text-slate-400">3 个问题不能重复；答案不区分大小写，忽略多余空格。</p>
+          <ErrorText>{securityError}</ErrorText>
+        </form>
+      </Modal>
     </div>
   );
 }

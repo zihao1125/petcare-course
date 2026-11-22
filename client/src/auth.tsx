@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api } from './api';
-import type { Role, User } from './types';
+import type { RegisterPayload, Role, User } from './types';
 
 interface AuthState {
   user: User | null;
   loading: boolean;
-  login: (username: string, password: string, role: Role) => Promise<User>;
-  register: (username: string, password: string) => Promise<User>;
+  login: (account: string, password: string, role: Role) => Promise<User>;
+  register: (payload: RegisterPayload) => Promise<User>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
 }
@@ -24,14 +24,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (username: string, password: string, role: Role) => {
-    const d = await api<{ user: User }>('/auth/login', { method: 'POST', body: { username, password, role } });
+  const login = async (account: string, password: string, role: Role) => {
+    const d = await api<{ user: User }>('/auth/login', { method: 'POST', body: { account, password, role } });
     setUser(d.user);
     return d.user;
   };
 
-  const register = async (username: string, password: string) => {
-    const d = await api<{ user: User }>('/auth/register', { method: 'POST', body: { username, password } });
+  const register = async (payload: RegisterPayload) => {
+    const d = await api<{ user: User }>('/auth/register', { method: 'POST', body: payload });
     setUser(d.user);
     return d.user;
   };

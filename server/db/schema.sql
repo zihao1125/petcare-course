@@ -1,10 +1,22 @@
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account TEXT,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+  profile_completed INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS user_security_answers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  question_key TEXT NOT NULL,
+  answer_hash TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+  UNIQUE (user_id, question_key)
 );
 
 CREATE TABLE IF NOT EXISTS pets (
@@ -113,6 +125,7 @@ CREATE TABLE IF NOT EXISTS dewormings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_pets_user ON pets(user_id);
+CREATE INDEX IF NOT EXISTS idx_security_user ON user_security_answers(user_id);
 CREATE INDEX IF NOT EXISTS idx_photos_pet ON pet_photos(pet_id);
 CREATE INDEX IF NOT EXISTS idx_weights_pet ON weight_records(pet_id);
 CREATE INDEX IF NOT EXISTS idx_health_pet ON health_records(pet_id);

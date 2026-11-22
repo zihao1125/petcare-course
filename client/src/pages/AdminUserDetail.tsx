@@ -200,10 +200,14 @@ export default function AdminUserDetail() {
 
       <Card>
         <SectionTitle>用户信息</SectionTitle>
-        <dl className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-3 text-sm md:grid-cols-5">
           <div>
-            <dt className="text-xs text-slate-400">用户名</dt>
-            <dd className="mt-0.5 font-medium text-slate-800">{data.user.username}</dd>
+            <dt className="text-xs text-slate-400">账号</dt>
+            <dd className="mt-0.5 font-medium text-slate-800">{data.user.account}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-slate-400">用户名（昵称）</dt>
+            <dd className="mt-0.5 text-slate-800">{data.user.username}</dd>
           </div>
           <div>
             <dt className="text-xs text-slate-400">注册时间</dt>

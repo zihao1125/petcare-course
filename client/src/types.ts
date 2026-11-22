@@ -2,10 +2,29 @@ export type Role = 'user' | 'admin';
 
 export interface User {
   id: number;
+  account: string;
   username: string;
   role: Role;
   status: 'active' | 'disabled';
+  profileCompleted: boolean;
   created_at: string;
+}
+
+export interface SecurityQuestion {
+  key: string;
+  label: string;
+}
+
+export interface SecurityAnswer {
+  key: string;
+  answer: string;
+}
+
+export interface RegisterPayload {
+  account: string;
+  username: string;
+  password: string;
+  securityQuestions: SecurityAnswer[];
 }
 
 export interface PetCounts {
@@ -137,6 +156,7 @@ export interface Reminder {
 
 export interface AdminUser {
   id: number;
+  account: string;
   username: string;
   status: 'active' | 'disabled';
   created_at: string;
