@@ -54,7 +54,7 @@ export default function HeroCarousel() {
       onMouseLeave={() => setPaused(false)}
       aria-label="宠物照片轮播"
     >
-      <div className="relative h-[230px] sm:h-[300px] lg:h-[340px]">
+      <div className="relative h-[170px] sm:h-[200px] lg:h-[230px]">
         {SLIDES.map((slide, i) => (
           <img
             key={slide.src}
@@ -68,11 +68,11 @@ export default function HeroCarousel() {
         ))}
         <div className="absolute inset-0 bg-gradient-to-t from-[#3a2417]/80 via-[#3a2417]/20 to-transparent" />
 
-        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 md:p-8">
+        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4 md:p-6">
           <div className="max-w-xl text-white">
-            <p className="text-[11px] font-medium uppercase tracking-[0.25em] text-orange-200">PetCare Diary</p>
-            <h2 className="mt-1.5 text-xl font-bold leading-snug md:text-3xl">{SLIDES[index].title}</h2>
-            <p className="mt-1.5 text-sm text-white/85 md:text-base">{SLIDES[index].subtitle}</p>
+            <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-orange-200 md:text-[11px]">PetCare Diary</p>
+            <h2 className="mt-1 text-lg font-bold leading-snug md:text-2xl">{SLIDES[index].title}</h2>
+            <p className="mt-1 line-clamp-1 text-xs text-white/85 md:text-sm">{SLIDES[index].subtitle}</p>
           </div>
 
           <div className="hidden gap-2 sm:flex">
@@ -95,7 +95,7 @@ export default function HeroCarousel() {
           </div>
         </div>
 
-        <div className="absolute right-5 top-5 flex gap-1.5 rounded-full bg-black/20 px-3 py-2 backdrop-blur md:right-8 md:top-8">
+        <div className="absolute right-4 top-4 flex gap-1.5 rounded-full bg-black/20 px-3 py-2 backdrop-blur md:right-6 md:top-6">
           {SLIDES.map((slide, i) => (
             <button
               key={slide.src}

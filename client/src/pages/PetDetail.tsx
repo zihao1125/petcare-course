@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
-import { Avatar, Badge, btnSecondary, Card, ErrorText, Spinner } from '../components/ui';
+import { Avatar, Badge, btnPrimary, btnSecondary, Card, ErrorText, Spinner } from '../components/ui';
 import { dueInfo, fmtDate, GENDER_LABEL, NEUTERED_LABEL, petMeta } from '../utils';
 import type {
   Deworming,
@@ -9,6 +9,7 @@ import type {
   Medication,
   Pet,
   PetDetailData,
+  PetTabKey,
   Photo,
   Reminder,
   Vaccination,
@@ -22,16 +23,16 @@ import PreventionTab from './tabs/PreventionTab';
 import PhotosTab from './tabs/PhotosTab';
 import MedicationsTab from './tabs/MedicationsTab';
 
-const TABS = [
+const TABS: Array<{ key: PetTabKey; label: string }> = [
   { key: 'overview', label: '概览' },
   { key: 'health', label: '身体状况' },
   { key: 'visits', label: '就医' },
   { key: 'prevention', label: '防疫驱虫' },
   { key: 'medications', label: '用药' },
   { key: 'photos', label: '生活照' }
-] as const;
+];
 
-type TabKey = (typeof TABS)[number]['key'];
+const TAB_KEYS = TABS.map((t) => t.key);
 
 interface Responses {
   pet: Pet;
@@ -46,10 +47,30 @@ interface Responses {
 
 export default function PetDetail() {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab') as PetTabKey | null;
   const [data, setData] = useState<PetDetailData | null>(null);
   const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [tab, setTab] = useState<TabKey>('overview');
+  const [tab, setTab] = useState<PetTabKey>(
+    requestedTab && TAB_KEYS.includes(requestedTab) ? requestedTab : 'overview'
+  );
+  const [autoNew, setAutoNew] = useState(searchParams.get('new') === '1');
+  const [highlight, setHighlight] = useState<string | null>(searchParams.get('record'));
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!searchParams.toString()) return;
+    const timer = window.setTimeout(() => setSearchParams({}, { replace: true }), 0);
+    return () => window.clearTimeout(timer);
+    // 只在首次进入时清理快捷入口参数
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!autoNew) return;
+    const timer = window.setTimeout(() => setAutoNew(false), 300);
+    return () => window.clearTimeout(timer);
+  }, [autoNew]);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -88,10 +109,31 @@ export default function PetDetail() {
   }, [load]);
 
   if (!data) {
-    return error ? <ErrorText>{error}</ErrorText> : <Spinner />;
+    if (!error) return <Spinner />;
+    return (
+      <Card>
+        <p className="text-sm font-medium text-red-700">宠物档案加载失败</p>
+        <p className="mt-1 text-sm text-slate-500">{error}</p>
+        <button type="button" className={`${btnPrimary} mt-4`} onClick={load}>
+          重新加载
+        </button>
+      </Card>
+    );
   }
 
   const { pet } = data;
+
+  const openTab = (next: PetTabKey) => {
+    setTab(next);
+    setHighlight(null);
+    setAutoNew(false);
+  };
+
+  const openRecord = (next: PetTabKey, recordKey: string) => {
+    setTab(next);
+    setHighlight(recordKey);
+    setAutoNew(false);
+  };
 
   return (
     <div className="space-y-4">
@@ -137,7 +179,7 @@ export default function PetDetail() {
           <button
             key={t.key}
             type="button"
-            onClick={() => setTab(t.key)}
+            onClick={() => openTab(t.key)}
             className={`whitespace-nowrap rounded-t-lg px-3 py-2 text-sm font-medium transition ${
               tab === t.key ? 'border-b-2 border-teal-600 text-teal-800' : 'text-slate-500 hover:text-slate-800'
             }`}
@@ -147,12 +189,20 @@ export default function PetDetail() {
         ))}
       </div>
 
-      {tab === 'overview' && <OverviewTab data={data} reminders={reminders} />}
-      {tab === 'health' && <HealthTab petId={pet.id} data={data} reload={load} />}
-      {tab === 'visits' && <VisitsTab petId={pet.id} data={data} reload={load} />}
-      {tab === 'prevention' && <PreventionTab petId={pet.id} data={data} reload={load} />}
-      {tab === 'medications' && <MedicationsTab petId={pet.id} data={data} reload={load} />}
-      {tab === 'photos' && <PhotosTab petId={pet.id} data={data} reload={load} />}
+      {tab === 'overview' && <OverviewTab data={data} onNavigate={openTab} onOpenRecord={openRecord} />}
+      {tab === 'health' && (
+        <HealthTab petId={pet.id} data={data} reload={load} openNew={autoNew} highlight={highlight} />
+      )}
+      {tab === 'visits' && (
+        <VisitsTab petId={pet.id} data={data} reload={load} openNew={autoNew} highlight={highlight} />
+      )}
+      {tab === 'prevention' && <PreventionTab petId={pet.id} data={data} reload={load} highlight={highlight} />}
+      {tab === 'medications' && (
+        <MedicationsTab petId={pet.id} data={data} reload={load} highlight={highlight} />
+      )}
+      {tab === 'photos' && (
+        <PhotosTab petId={pet.id} data={data} reload={load} openNew={autoNew} highlight={highlight} />
+      )}
 
       <ErrorText>{error}</ErrorText>
     </div>

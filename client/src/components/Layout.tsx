@@ -124,15 +124,6 @@ export default function Layout({ children, admin = false }: { children: ReactNod
           ))}
         </nav>
 
-        <div className="mt-6 rounded-2xl bg-teal-50/80 p-3.5">
-          <p className="text-xs font-semibold text-teal-800">今日小贴士</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
-            {admin
-              ? '后台仅可查看用户业务数据，账号管理操作会即时生效。'
-              : '每周固定一天称重，连续记录更容易发现体重变化。'}
-          </p>
-        </div>
-
         <div className="mt-auto pt-6">
           <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-100 text-sm font-semibold text-teal-800">

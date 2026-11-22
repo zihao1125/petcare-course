@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   CartesianGrid,
   Line,
@@ -53,11 +53,15 @@ function healthMeta(h: HealthRecord) {
 export default function HealthTab({
   petId,
   data,
-  reload
+  reload,
+  openNew = false,
+  highlight = null
 }: {
   petId: number;
   data: PetDetailData;
   reload: () => Promise<void>;
+  openNew?: boolean;
+  highlight?: string | null;
 }) {
   const [weightForm, setWeightForm] = useState({ record_date: today(), weight_kg: '', note: '' });
   const [weightError, setWeightError] = useState('');
@@ -67,6 +71,19 @@ export default function HealthTab({
   const [form, setForm] = useState({ ...emptyHealth });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (openNew) setOpen(true);
+  }, [openNew]);
+
+  useEffect(() => {
+    if (!highlight) return;
+    const el = document.getElementById(highlight);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlight]);
+
+  const highlightCls = (key: string) =>
+    highlight === key ? 'rounded-lg bg-teal-50/70 ring-2 ring-teal-300 px-2 -mx-2' : '';
 
   const chartData = useMemo(
     () =>
@@ -216,7 +233,11 @@ export default function HealthTab({
         ) : (
           <ul className="mt-3 divide-y divide-slate-100">
             {data.weights.map((w) => (
-              <li key={w.id} className="flex items-center justify-between gap-3 py-2.5">
+              <li
+                key={w.id}
+                id={`weight-${w.id}`}
+                className={`flex items-center justify-between gap-3 py-2.5 ${highlightCls(`weight-${w.id}`)}`}
+              >
                 <div>
                   <p className="text-sm text-slate-800">
                     {w.weight_kg} kg
@@ -248,7 +269,11 @@ export default function HealthTab({
         ) : (
           <ul className="divide-y divide-slate-100">
             {data.health.map((h) => (
-              <li key={h.id} className="flex items-start justify-between gap-3 py-3">
+              <li
+                key={h.id}
+                id={`health-${h.id}`}
+                className={`flex items-start justify-between gap-3 py-3 ${highlightCls(`health-${h.id}`)}`}
+              >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-800">{fmtDate(h.record_date)}</p>
                   {healthMeta(h).length > 0 && (

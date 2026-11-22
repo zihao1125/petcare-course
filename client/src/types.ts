@@ -14,8 +14,11 @@ export interface PetCounts {
   visits: number;
   vaccinations: number;
   dewormings: number;
+  medications: number;
   photos: number;
 }
+
+export type PetTabKey = 'overview' | 'health' | 'visits' | 'prevention' | 'medications' | 'photos';
 
 export interface Pet {
   id: number;

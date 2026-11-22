@@ -39,6 +39,9 @@ app.get('/uploads/pets/:petId/:file', requireAuth, (req, res, next) => {
   const fileName = path.basename(req.params.file);
   const fullPath = path.join(UPLOAD_ROOT, 'pets', String(pet.id), fileName);
   if (!fs.existsSync(fullPath)) return next(new HttpError(404, '文件不存在'));
+  if (req.query.download === '1') {
+    return res.download(fullPath, fileName);
+  }
   res.sendFile(fullPath);
 });
 

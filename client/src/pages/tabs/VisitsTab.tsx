@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import ImageDropzone from '../../components/ImageDropzone';
+import ImageViewer from '../../components/ImageViewer';
 import {
   btnGhost,
   btnPrimary,
@@ -31,17 +32,45 @@ const emptyForm = {
 export default function VisitsTab({
   petId,
   data,
-  reload
+  reload,
+  openNew = false,
+  highlight = null
 }: {
   petId: number;
   data: PetDetailData;
   reload: () => Promise<void>;
+  openNew?: boolean;
+  highlight?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ ...emptyForm });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [uploadingId, setUploadingId] = useState<number | null>(null);
+  const [viewer, setViewer] = useState<{ visitId: number; index: number } | null>(null);
+
+  useEffect(() => {
+    if (openNew) setOpen(true);
+  }, [openNew]);
+
+  useEffect(() => {
+    if (!highlight) return;
+    const el = document.getElementById(highlight);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlight]);
+
+  const highlightCls = (key: string) =>
+    highlight === key ? 'ring-2 ring-teal-300 bg-teal-50/50' : '';
+
+  const viewerVisit = viewer ? data.visits.find((v) => v.id === viewer.visitId) : null;
+  const viewerImages = (viewerVisit?.images || []).map((img) => ({
+    src: img.file_path,
+    alt: '检查报告',
+    caption: `${viewerVisit?.hospital || '就医记录'}${viewerVisit?.visit_date ? ` · ${viewerVisit.visit_date}` : ''}`,
+    date: viewerVisit?.visit_date || '',
+    downloadUrl: `${img.file_path}?download=1`,
+    downloadName: `report-${img.id}.jpg`
+  }));
 
   const set = (key: keyof typeof form, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -123,7 +152,11 @@ export default function VisitsTab({
         ) : (
           <div className="space-y-4">
             {data.visits.map((visit) => (
-              <article key={visit.id} className="rounded-xl border border-slate-200 p-3 md:p-4">
+              <article
+                key={visit.id}
+                id={`visit-${visit.id}`}
+                className={`rounded-xl border border-slate-200 p-3 md:p-4 ${highlightCls(`visit-${visit.id}`)}`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">
@@ -177,14 +210,24 @@ export default function VisitsTab({
                 </dl>
 
                 <div className="mt-3">
-                  <p className="mb-2 text-xs font-medium text-slate-500">检查报告（{visit.images?.length || 0}）</p>
+                  <p className="mb-2 text-xs font-medium text-slate-500">
+                    检查报告（{visit.images?.length || 0}）· 点击图片查看大图，可在查看器中下载
+                  </p>
                   {visit.images && visit.images.length > 0 && (
                     <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                      {visit.images.map((img) => (
+                      {visit.images.map((img, idx) => (
                         <div key={img.id} className="group relative overflow-hidden rounded-lg border border-slate-200">
-                          <a href={img.file_path} target="_blank" rel="noreferrer">
-                            <img src={img.file_path} alt="检查报告" className="h-24 w-full object-cover" />
-                          </a>
+                          <button
+                            type="button"
+                            className="block w-full"
+                            onClick={() => setViewer({ visitId: visit.id, index: idx })}
+                          >
+                            <img
+                              src={img.file_path}
+                              alt="检查报告"
+                              className="h-24 w-full object-cover transition group-hover:opacity-85"
+                            />
+                          </button>
                           <button
                             type="button"
                             onClick={() => removeImage(visit.id, img.id)}
@@ -273,6 +316,13 @@ export default function VisitsTab({
           </div>
         </form>
       </Modal>
+
+      <ImageViewer
+        images={viewerImages}
+        index={viewer?.index ?? null}
+        onClose={() => setViewer(null)}
+        onIndexChange={(i) => setViewer((v) => (v ? { ...v, index: i } : v))}
+      />
     </div>
   );
 }

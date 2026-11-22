@@ -12,6 +12,7 @@ interface Props {
   hint?: string;
   compact?: boolean;
   previewAlt?: string;
+  previewLabel?: string;
   className?: string;
 }
 
@@ -45,6 +46,7 @@ export default function ImageDropzone({
   hint,
   compact = false,
   previewAlt = '图片预览',
+  previewLabel = '已选择图片',
   className = ''
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -114,7 +116,7 @@ export default function ImageDropzone({
           <div className="flex items-center gap-3">
             <img src={preview} alt={previewAlt} className="h-20 w-20 rounded-xl border border-slate-200 object-cover" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-slate-700">已选择图片</p>
+              <p className="text-sm font-medium text-slate-700">{previewLabel}</p>
               <p className="mt-0.5 text-xs text-slate-400">点击或拖拽到这里可以更换</p>
               <span className="mt-2 inline-flex rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white">
                 更换图片

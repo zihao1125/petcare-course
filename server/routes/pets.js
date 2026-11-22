@@ -29,8 +29,9 @@ function petWithCounts(pet) {
        (SELECT COUNT(*) FROM vet_visits WHERE pet_id = ?) AS visits,
        (SELECT COUNT(*) FROM vaccinations WHERE pet_id = ?) AS vaccinations,
        (SELECT COUNT(*) FROM dewormings WHERE pet_id = ?) AS dewormings,
+       (SELECT COUNT(*) FROM medications WHERE pet_id = ?) AS medications,
        (SELECT COUNT(*) FROM pet_photos WHERE pet_id = ?) AS photos`,
-    [pet.id, pet.id, pet.id, pet.id, pet.id, pet.id]
+    [pet.id, pet.id, pet.id, pet.id, pet.id, pet.id, pet.id]
   );
   return { ...pet, counts };
 }

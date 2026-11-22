@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import {
   Badge,
@@ -18,11 +18,13 @@ import type { Deworming, PetDetailData, Vaccination } from '../../types';
 export default function PreventionTab({
   petId,
   data,
-  reload
+  reload,
+  highlight = null
 }: {
   petId: number;
   data: PetDetailData;
   reload: () => Promise<void>;
+  highlight?: string | null;
 }) {
   const [vaccOpen, setVaccOpen] = useState(false);
   const [vaccForm, setVaccForm] = useState({ vaccine_name: '', dose_no: '', date: today(), next_due_date: '', note: '' });
@@ -33,6 +35,15 @@ export default function PreventionTab({
   const [wormForm, setWormForm] = useState({ type: '', date: today(), next_due_date: '', note: '' });
   const [wormError, setWormError] = useState('');
   const [wormBusy, setWormBusy] = useState(false);
+
+  useEffect(() => {
+    if (!highlight) return;
+    const el = document.getElementById(highlight);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlight]);
+
+  const highlightCls = (key: string) =>
+    highlight === key ? 'rounded-lg ring-2 ring-teal-300 bg-teal-50/60 px-2 -mx-2' : '';
 
   const submitVacc = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +132,11 @@ export default function PreventionTab({
             {data.vaccinations.map((v) => {
               const due = dueInfo(v.next_due_date);
               return (
-                <li key={v.id} className={`flex items-start justify-between gap-3 py-3 ${rowClass(v.next_due_date)}`}>
+                <li
+                  key={v.id}
+                  id={`vacc-${v.id}`}
+                  className={`flex items-start justify-between gap-3 py-3 ${rowClass(v.next_due_date)} ${highlightCls(`vacc-${v.id}`)}`}
+                >
                   <div>
                     <p className="text-sm font-medium text-slate-800">
                       {v.vaccine_name}
@@ -155,7 +170,11 @@ export default function PreventionTab({
             {data.dewormings.map((d) => {
               const due = dueInfo(d.next_due_date);
               return (
-                <li key={d.id} className={`flex items-start justify-between gap-3 py-3 ${rowClass(d.next_due_date)}`}>
+                <li
+                  key={d.id}
+                  id={`deworm-${d.id}`}
+                  className={`flex items-start justify-between gap-3 py-3 ${rowClass(d.next_due_date)} ${highlightCls(`deworm-${d.id}`)}`}
+                >
                   <div>
                     <p className="text-sm font-medium text-slate-800">{d.type}</p>
                     <p className="mt-0.5 text-xs text-slate-500">驱虫日期：{fmtDate(d.date)}</p>

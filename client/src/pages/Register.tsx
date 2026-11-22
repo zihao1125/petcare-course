@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { btnPrimary, ErrorText, Field, inputCls } from '../components/ui';
 
 export default function Register() {
   const { user, loading, register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const rawFrom = (location.state as { from?: string } | null)?.from;
+  const from = rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '';
+  const target = from && !from.startsWith('/admin') && !from.startsWith('/login') ? from : '/';
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -13,8 +17,9 @@ export default function Register() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) navigate(user.role === 'admin' ? '/admin' : '/', { replace: true });
-  }, [loading, user, navigate]);
+    if (!loading && user) navigate(user.role === 'admin' ? '/admin' : target, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user, navigate, target]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +39,7 @@ export default function Register() {
     setBusy(true);
     try {
       await register(username.trim(), password);
-      navigate('/', { replace: true });
+      navigate(target, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : '注册失败');
     } finally {
@@ -87,7 +92,7 @@ export default function Register() {
           </form>
           <p className="mt-4 text-center text-sm text-slate-500">
             已有账号？
-            <Link to="/login" className="font-medium text-teal-700 hover:text-teal-900">
+            <Link to="/login" state={{ from }} className="font-medium text-teal-700 hover:text-teal-900">
               返回登录
             </Link>
           </p>

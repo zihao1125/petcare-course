@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth';
 import Layout from './components/Layout';
 import { Spinner } from './components/ui';
@@ -22,23 +22,32 @@ function FullScreenLoading() {
 
 function RequireUser({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <FullScreenLoading />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+  }
   if (user.role !== 'user') return <Navigate to="/admin" replace />;
   return <Layout>{children}</Layout>;
 }
 
 function RequireAnyUser({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <FullScreenLoading />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+  }
   return <Layout admin={user.role === 'admin'}>{children}</Layout>;
 }
 
 function RequireAdmin({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <FullScreenLoading />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+  }
   if (user.role !== 'admin') return <Navigate to="/" replace />;
   return <Layout admin>{children}</Layout>;
 }

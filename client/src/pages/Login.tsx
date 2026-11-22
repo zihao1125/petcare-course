@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { btnPrimary, ErrorText, Field, inputCls, Spinner } from '../components/ui';
 import type { Role } from '../types';
@@ -7,15 +7,24 @@ import type { Role } from '../types';
 export default function Login() {
   const { user, loading, login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const rawFrom = (location.state as { from?: string } | null)?.from;
+  const from = rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '';
   const [role, setRole] = useState<Role>('user');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const targetFor = (nextRole: Role) => {
+    if (nextRole === 'admin') return from.startsWith('/admin') ? from : '/admin';
+    return from && !from.startsWith('/admin') && !from.startsWith('/login') ? from : '/';
+  };
+
   useEffect(() => {
-    if (!loading && user) navigate(user.role === 'admin' ? '/admin' : '/', { replace: true });
-  }, [loading, user, navigate]);
+    if (!loading && user) navigate(targetFor(user.role), { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user, navigate, from]);
 
   if (loading) {
     return (
@@ -35,7 +44,7 @@ export default function Login() {
     setBusy(true);
     try {
       const u = await login(username.trim(), password, role);
-      navigate(u.role === 'admin' ? '/admin' : '/', { replace: true });
+      navigate(targetFor(u.role), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : '登录失败');
     } finally {
@@ -44,10 +53,10 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 via-slate-50 to-cyan-50 px-4 py-10">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 via-slate-50 to-amber-50 px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-700 text-2xl font-bold text-white">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-600 text-2xl font-bold text-white">
             宠
           </div>
           <h1 className="text-2xl font-bold text-slate-900">宠知微</h1>
@@ -102,7 +111,7 @@ export default function Login() {
           {role === 'user' ? (
             <p className="mt-4 text-center text-sm text-slate-500">
               还没有账号？
-              <Link to="/register" className="font-medium text-teal-700 hover:text-teal-900">
+              <Link to="/register" state={{ from }} className="font-medium text-teal-700 hover:text-teal-900">
                 立即注册
               </Link>
             </p>

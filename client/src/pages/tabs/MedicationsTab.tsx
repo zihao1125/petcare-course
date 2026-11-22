@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import {
   btnPrimary,
@@ -19,16 +19,27 @@ const emptyForm = { name: '', dosage: '', frequency: '', start_date: '', end_dat
 export default function MedicationsTab({
   petId,
   data,
-  reload
+  reload,
+  highlight = null
 }: {
   petId: number;
   data: PetDetailData;
   reload: () => Promise<void>;
+  highlight?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ ...emptyForm, start_date: today() });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!highlight) return;
+    const el = document.getElementById(highlight);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlight]);
+
+  const highlightCls = (key: string) =>
+    highlight === key ? 'rounded-lg ring-2 ring-teal-300 bg-teal-50/60 px-2 -mx-2' : '';
 
   const set = (key: keyof typeof form, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -90,7 +101,11 @@ export default function MedicationsTab({
         ) : (
           <ul className="divide-y divide-slate-100">
             {data.medications.map((m) => (
-              <li key={m.id} className="flex items-start justify-between gap-3 py-3">
+              <li
+                key={m.id}
+                id={`med-${m.id}`}
+                className={`flex items-start justify-between gap-3 py-3 ${highlightCls(`med-${m.id}`)}`}
+              >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-800">{m.name}</p>
                   <p className="mt-0.5 text-xs text-slate-500">
