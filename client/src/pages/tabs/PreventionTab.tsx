@@ -1,0 +1,240 @@
+import { useState } from 'react';
+import { api } from '../../api';
+import {
+  Badge,
+  btnGhost,
+  btnPrimary,
+  Card,
+  Empty,
+  ErrorText,
+  Field,
+  inputCls,
+  Modal,
+  SectionTitle
+} from '../../components/ui';
+import { daysUntil, dueInfo, fmtDate, today } from '../../utils';
+import type { Deworming, PetDetailData, Vaccination } from '../../types';
+
+export default function PreventionTab({
+  petId,
+  data,
+  reload
+}: {
+  petId: number;
+  data: PetDetailData;
+  reload: () => Promise<void>;
+}) {
+  const [vaccOpen, setVaccOpen] = useState(false);
+  const [vaccForm, setVaccForm] = useState({ vaccine_name: '', dose_no: '', date: today(), next_due_date: '', note: '' });
+  const [vaccError, setVaccError] = useState('');
+  const [vaccBusy, setVaccBusy] = useState(false);
+
+  const [wormOpen, setWormOpen] = useState(false);
+  const [wormForm, setWormForm] = useState({ type: '', date: today(), next_due_date: '', note: '' });
+  const [wormError, setWormError] = useState('');
+  const [wormBusy, setWormBusy] = useState(false);
+
+  const submitVacc = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVaccError('');
+    if (!vaccForm.vaccine_name.trim()) {
+      setVaccError('请填写疫苗名称');
+      return;
+    }
+    setVaccBusy(true);
+    try {
+      await api(`/pets/${petId}/vaccinations`, {
+        method: 'POST',
+        body: { ...vaccForm, next_due_date: vaccForm.next_due_date || null }
+      });
+      setVaccForm({ vaccine_name: '', dose_no: '', date: today(), next_due_date: '', note: '' });
+      setVaccOpen(false);
+      await reload();
+    } catch (err) {
+      setVaccError(err instanceof Error ? err.message : '保存失败');
+    } finally {
+      setVaccBusy(false);
+    }
+  };
+
+  const submitWorm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWormError('');
+    if (!wormForm.type.trim()) {
+      setWormError('请填写驱虫类型');
+      return;
+    }
+    setWormBusy(true);
+    try {
+      await api(`/pets/${petId}/dewormings`, {
+        method: 'POST',
+        body: { ...wormForm, next_due_date: wormForm.next_due_date || null }
+      });
+      setWormForm({ type: '', date: today(), next_due_date: '', note: '' });
+      setWormOpen(false);
+      await reload();
+    } catch (err) {
+      setWormError(err instanceof Error ? err.message : '保存失败');
+    } finally {
+      setWormBusy(false);
+    }
+  };
+
+  const removeVacc = async (record: Vaccination) => {
+    if (!window.confirm(`确定删除疫苗记录「${record.vaccine_name}」吗？`)) return;
+    await api(`/pets/${petId}/vaccinations/${record.id}`, { method: 'DELETE' }).then(reload).catch((err) => window.alert(err.message));
+  };
+
+  const removeWorm = async (record: Deworming) => {
+    if (!window.confirm(`确定删除驱虫记录「${record.type}」吗？`)) return;
+    await api(`/pets/${petId}/dewormings/${record.id}`, { method: 'DELETE' }).then(reload).catch((err) => window.alert(err.message));
+  };
+
+  const rowClass = (next?: string | null) => {
+    const days = daysUntil(next);
+    if (days === null) return '';
+    if (days <= 0) return 'rounded-lg bg-red-50 px-2 -mx-2';
+    if (days <= 7) return 'rounded-lg bg-amber-50 px-2 -mx-2';
+    return '';
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <SectionTitle action={<button type="button" className={btnPrimary} onClick={() => setVaccOpen(true)}>＋ 添加疫苗</button>}>
+          疫苗记录
+        </SectionTitle>
+        {data.vaccinations.length === 0 ? (
+          <Empty text="暂无疫苗记录" />
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {data.vaccinations.map((v) => {
+              const due = dueInfo(v.next_due_date);
+              return (
+                <li key={v.id} className={`flex items-start justify-between gap-3 py-3 ${rowClass(v.next_due_date)}`}>
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">
+                      {v.vaccine_name}
+                      {v.dose_no ? ` · ${v.dose_no}` : ''}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">接种日期：{fmtDate(v.date)}</p>
+                    <p className="text-xs text-slate-500">下次到期：{fmtDate(v.next_due_date)}</p>
+                    {v.note && <p className="mt-1 text-xs text-slate-400">{v.note}</p>}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge className={due.className}>{due.text}</Badge>
+                    <button type="button" className={btnGhost} onClick={() => removeVacc(v)}>
+                      删除
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
+
+      <Card>
+        <SectionTitle action={<button type="button" className={btnPrimary} onClick={() => setWormOpen(true)}>＋ 添加驱虫</button>}>
+          驱虫记录
+        </SectionTitle>
+        {data.dewormings.length === 0 ? (
+          <Empty text="暂无驱虫记录" />
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {data.dewormings.map((d) => {
+              const due = dueInfo(d.next_due_date);
+              return (
+                <li key={d.id} className={`flex items-start justify-between gap-3 py-3 ${rowClass(d.next_due_date)}`}>
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{d.type}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">驱虫日期：{fmtDate(d.date)}</p>
+                    <p className="text-xs text-slate-500">下次到期：{fmtDate(d.next_due_date)}</p>
+                    {d.note && <p className="mt-1 text-xs text-slate-400">{d.note}</p>}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge className={due.className}>{due.text}</Badge>
+                    <button type="button" className={btnGhost} onClick={() => removeWorm(d)}>
+                      删除
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
+
+      <Modal
+        open={vaccOpen}
+        title="添加疫苗记录"
+        onClose={() => setVaccOpen(false)}
+        footer={
+          <>
+            <button type="button" className={btnGhost} onClick={() => setVaccOpen(false)} disabled={vaccBusy}>
+              取消
+            </button>
+            <button type="submit" form="vacc-form" className={btnPrimary} disabled={vaccBusy}>
+              {vaccBusy ? '保存中…' : '保存'}
+            </button>
+          </>
+        }
+      >
+        <form id="vacc-form" onSubmit={submitVacc} className="space-y-3">
+          <Field label="疫苗名称" required>
+            <input className={inputCls} value={vaccForm.vaccine_name} onChange={(e) => setVaccForm((p) => ({ ...p, vaccine_name: e.target.value }))} placeholder="例如：猫三联" />
+          </Field>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="针次">
+              <input className={inputCls} value={vaccForm.dose_no} onChange={(e) => setVaccForm((p) => ({ ...p, dose_no: e.target.value }))} placeholder="例如：第 3 针" />
+            </Field>
+            <Field label="接种日期" required>
+              <input type="date" className={inputCls} value={vaccForm.date} onChange={(e) => setVaccForm((p) => ({ ...p, date: e.target.value }))} />
+            </Field>
+            <Field label="下次到期日期">
+              <input type="date" className={inputCls} value={vaccForm.next_due_date} onChange={(e) => setVaccForm((p) => ({ ...p, next_due_date: e.target.value }))} />
+            </Field>
+            <Field label="备注">
+              <input className={inputCls} value={vaccForm.note} onChange={(e) => setVaccForm((p) => ({ ...p, note: e.target.value }))} />
+            </Field>
+          </div>
+          <ErrorText>{vaccError}</ErrorText>
+        </form>
+      </Modal>
+
+      <Modal
+        open={wormOpen}
+        title="添加驱虫记录"
+        onClose={() => setWormOpen(false)}
+        footer={
+          <>
+            <button type="button" className={btnGhost} onClick={() => setWormOpen(false)} disabled={wormBusy}>
+              取消
+            </button>
+            <button type="submit" form="worm-form" className={btnPrimary} disabled={wormBusy}>
+              {wormBusy ? '保存中…' : '保存'}
+            </button>
+          </>
+        }
+      >
+        <form id="worm-form" onSubmit={submitWorm} className="space-y-3">
+          <Field label="驱虫类型" required>
+            <input className={inputCls} value={wormForm.type} onChange={(e) => setWormForm((p) => ({ ...p, type: e.target.value }))} placeholder="例如：体内驱虫 / 体外驱虫" />
+          </Field>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="驱虫日期" required>
+              <input type="date" className={inputCls} value={wormForm.date} onChange={(e) => setWormForm((p) => ({ ...p, date: e.target.value }))} />
+            </Field>
+            <Field label="下次到期日期">
+              <input type="date" className={inputCls} value={wormForm.next_due_date} onChange={(e) => setWormForm((p) => ({ ...p, next_due_date: e.target.value }))} />
+            </Field>
+          </div>
+          <Field label="备注">
+            <input className={inputCls} value={wormForm.note} onChange={(e) => setWormForm((p) => ({ ...p, note: e.target.value }))} />
+          </Field>
+          <ErrorText>{wormError}</ErrorText>
+        </form>
+      </Modal>
+    </div>
+  );
+}
