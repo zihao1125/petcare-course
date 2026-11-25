@@ -190,6 +190,36 @@ router.post('/visits', (req, res) => {
   res.status(201).json({ record: { ...visit, images: [] } });
 });
 
+router.put('/visits/:visitId', loadVisit, (req, res) => {
+  const body = req.body || {};
+  run(
+    `UPDATE vet_visits SET
+       visit_date = ?, hospital = ?, doctor = ?, department = ?, chief_complaint = ?,
+       diagnosis = ?, prescription = ?, cost = ?, followup_date = ?, note = ?
+     WHERE id = ?`,
+    [
+      requiredDate(body.visit_date, '就诊日期'),
+      optionalText(body.hospital, 100),
+      optionalText(body.doctor, 50),
+      optionalText(body.department, 50),
+      optionalText(body.chief_complaint, 1000),
+      optionalText(body.diagnosis, 1000),
+      optionalText(body.prescription, 1000),
+      optionalNumber(body.cost, '费用', { min: 0, max: 10000000 }),
+      optionalDate(body.followup_date, '复诊日期'),
+      optionalText(body.note, 500),
+      req.visit.id
+    ]
+  );
+  const visit = get('SELECT * FROM vet_visits WHERE id = ?', [req.visit.id]);
+  res.json({
+    record: {
+      ...visit,
+      images: all('SELECT id, file_path FROM vet_visit_images WHERE visit_id = ? ORDER BY id', [req.visit.id])
+    }
+  });
+});
+
 router.delete('/visits/:visitId', loadVisit, (req, res) => {
   const images = all('SELECT file_path FROM vet_visit_images WHERE visit_id = ?', [req.visit.id]);
   for (const img of images) removeFileByUrl(img.file_path);
@@ -243,6 +273,24 @@ router.post('/vaccinations', (req, res) => {
   res.status(201).json({ record: get('SELECT * FROM vaccinations WHERE id = ?', [result.lastInsertRowid]) });
 });
 
+router.put('/vaccinations/:recordId', (req, res) => {
+  const body = req.body || {};
+  const result = run(
+    'UPDATE vaccinations SET vaccine_name = ?, dose_no = ?, date = ?, next_due_date = ?, note = ? WHERE id = ? AND pet_id = ?',
+    [
+      requiredText(body.vaccine_name, '疫苗名称', 100),
+      optionalText(body.dose_no, 50),
+      requiredDate(body.date, '接种日期'),
+      optionalDate(body.next_due_date, '下次到期日期'),
+      optionalText(body.note, 500),
+      Number(req.params.recordId),
+      req.pet.id
+    ]
+  );
+  recordDeleted(result.changes);
+  res.json({ record: get('SELECT * FROM vaccinations WHERE id = ?', [Number(req.params.recordId)]) });
+});
+
 router.delete('/vaccinations/:recordId', (req, res) => {
   const result = run('DELETE FROM vaccinations WHERE id = ? AND pet_id = ?', [
     Number(req.params.recordId),
@@ -272,6 +320,23 @@ router.post('/dewormings', (req, res) => {
     ]
   );
   res.status(201).json({ record: get('SELECT * FROM dewormings WHERE id = ?', [result.lastInsertRowid]) });
+});
+
+router.put('/dewormings/:recordId', (req, res) => {
+  const body = req.body || {};
+  const result = run(
+    'UPDATE dewormings SET type = ?, date = ?, next_due_date = ?, note = ? WHERE id = ? AND pet_id = ?',
+    [
+      requiredText(body.type, '驱虫类型', 100),
+      requiredDate(body.date, '驱虫日期'),
+      optionalDate(body.next_due_date, '下次到期日期'),
+      optionalText(body.note, 500),
+      Number(req.params.recordId),
+      req.pet.id
+    ]
+  );
+  recordDeleted(result.changes);
+  res.json({ record: get('SELECT * FROM dewormings WHERE id = ?', [Number(req.params.recordId)]) });
 });
 
 router.delete('/dewormings/:recordId', (req, res) => {

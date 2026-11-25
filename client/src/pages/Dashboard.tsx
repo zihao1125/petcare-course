@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
@@ -13,7 +13,7 @@ import {
   SectionTitle,
   Spinner
 } from '../components/ui';
-import { dueInfo, petMeta } from '../utils';
+import { dueGroup, dueInfo, petMeta, reminderLink, reminderTarget } from '../utils';
 import type { Pet, PetTabKey, Reminder } from '../types';
 
 interface QuickAction {
@@ -34,6 +34,39 @@ const TIPS = [
   '疫苗、驱虫到期前 7 天，提前准备就诊安排。',
   '就医后把诊断和报告拍照留档，复诊时直接用。'
 ];
+
+const REMINDER_GROUPS: Array<{
+  key: 'overdue' | 'today' | 'soon';
+  label: string;
+  description: string;
+  dot: string;
+  text: string;
+}> = [
+  { key: 'overdue', label: '已逾期', description: '已经超过到期日，尽快处理', dot: 'bg-red-500', text: 'text-red-700' },
+  { key: 'today', label: '今天到期', description: '今天需要安排', dot: 'bg-orange-500', text: 'text-orange-700' },
+  { key: 'soon', label: '即将到期', description: '7 天内到期', dot: 'bg-amber-400', text: 'text-amber-700' }
+];
+
+function ReminderRow({ reminder, compact = false }: { reminder: Reminder; compact?: boolean }) {
+  const due = dueInfo(reminder.due_date);
+  const target = reminderTarget(reminder);
+  return (
+    <Link
+      to={reminderLink(reminder)}
+      className={`block rounded-lg px-2 py-2 transition hover:bg-teal-50/60 ${compact ? '' : 'ring-1 ring-slate-100'}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">
+          {reminder.pet_name} · {reminder.title}
+        </p>
+        <Badge className={due.className}>{due.text}</Badge>
+      </div>
+      <p className="mt-0.5 text-xs text-slate-400">
+        {target.label} · 到期日 {reminder.due_date} · 点击查看或改日期
+      </p>
+    </Link>
+  );
+}
 
 function QuickIcon({ kind }: { kind: QuickAction['key'] }) {
   const paths = {
@@ -76,6 +109,7 @@ export default function Dashboard() {
   const [reminderError, setReminderError] = useState('');
   const [loading, setLoading] = useState(true);
   const [picker, setPicker] = useState<QuickAction | null>(null);
+  const [allRemindersOpen, setAllRemindersOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,6 +137,12 @@ export default function Dashboard() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const groupedReminders = useMemo(() => {
+    const groups: Record<'overdue' | 'today' | 'soon', Reminder[]> = { overdue: [], today: [], soon: [] };
+    reminders.forEach((reminder) => groups[dueGroup(reminder.days_left)].push(reminder));
+    return groups;
+  }, [reminders]);
 
   if (!pets && loading) return <Spinner />;
 
@@ -223,7 +263,7 @@ export default function Dashboard() {
         <aside className="space-y-4">
           <Card>
             <SectionTitle action={<Badge className="bg-amber-100 text-amber-700">{reminders.length} 项</Badge>}>
-              即将到期
+              到期提醒
             </SectionTitle>
             {reminderError ? (
               <div className="rounded-xl bg-red-50 px-3 py-3 text-sm text-red-700">
@@ -237,27 +277,50 @@ export default function Dashboard() {
                 近 7 天没有疫苗、驱虫或复诊到期
               </p>
             ) : (
-              <ul className="divide-y divide-slate-100">
-                {reminders.slice(0, 6).map((r) => {
-                  const due = dueInfo(r.due_date);
+              <div className="space-y-3">
+                {REMINDER_GROUPS.map((group) => {
+                  const list = groupedReminders[group.key];
+                  if (list.length === 0) return null;
                   return (
-                    <li key={`${r.kind}-${r.record_id}-${r.pet_id}`} className="py-2.5">
-                      <Link to={`/pets/${r.pet_id}`} className="block">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">
-                            {r.pet_name} · {r.title}
-                          </p>
-                          <Badge className={due.className}>{due.text}</Badge>
-                        </div>
-                        <p className="mt-0.5 text-xs text-slate-400">
-                          {r.kind === 'vaccination' ? '疫苗' : r.kind === 'deworming' ? '驱虫' : '复诊'} · 到期日{' '}
-                          {r.due_date}
+                    <section key={group.key}>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <p className={`flex items-center gap-1.5 text-xs font-semibold ${group.text}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${group.dot}`} />
+                          {group.label}
+                          <span className="font-normal text-slate-400">· {group.description}</span>
                         </p>
-                      </Link>
-                    </li>
+                        <span className="text-xs text-slate-400">{list.length} 项</span>
+                      </div>
+                      <ul className="divide-y divide-slate-100">
+                        {list.slice(0, 2).map((r) => (
+                          <li key={`${r.kind}-${r.record_id}-${r.pet_id}`}>
+                            <ReminderRow reminder={r} compact />
+                          </li>
+                        ))}
+                      </ul>
+                      {list.length > 2 && (
+                        <button
+                          type="button"
+                          className="mt-0.5 text-xs text-teal-700 hover:text-teal-900"
+                          onClick={() => setAllRemindersOpen(true)}
+                        >
+                          本组还有 {list.length - 2} 项，查看全部
+                        </button>
+                      )}
+                    </section>
                   );
                 })}
-              </ul>
+                {reminders.length > 4 && (
+                  <button
+                    type="button"
+                    className="w-full rounded-xl border border-slate-200 py-2 text-sm text-slate-600 transition hover:bg-slate-50"
+                    onClick={() => setAllRemindersOpen(true)}
+                  >
+                    查看全部 {reminders.length} 项提醒
+                  </button>
+                )}
+                <p className="text-[11px] text-slate-400">点任意一条可直接打开对应记录，查看或修改到期日期。</p>
+              </div>
             )}
           </Card>
 
@@ -301,6 +364,50 @@ export default function Dashboard() {
               </span>
             </button>
           ))}
+        </div>
+      </Modal>
+
+      <Modal
+        open={allRemindersOpen}
+        title={`全部到期提醒（${reminders.length} 项）`}
+        onClose={() => setAllRemindersOpen(false)}
+        wide
+        footer={
+          <button type="button" className={btnPrimary} onClick={() => setAllRemindersOpen(false)}>
+            知道了
+          </button>
+        }
+      >
+        <p className="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
+          按「已逾期 → 今天到期 → 即将到期」分组；点击任意一条会直接打开对应宠物的那条记录，可以查看或修改到期日期。
+        </p>
+        <div className="space-y-4">
+          {REMINDER_GROUPS.map((group) => {
+            const list = groupedReminders[group.key];
+            return (
+              <section key={group.key}>
+                <div className="mb-1 flex items-center justify-between">
+                  <p className={`flex items-center gap-1.5 text-sm font-semibold ${group.text}`}>
+                    <span className={`h-2 w-2 rounded-full ${group.dot}`} />
+                    {group.label}
+                    <span className="text-xs font-normal text-slate-400">· {group.description}</span>
+                  </p>
+                  <span className="text-xs text-slate-400">{list.length} 项</span>
+                </div>
+                {list.length === 0 ? (
+                  <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-400">没有此类提醒</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {list.map((r) => (
+                      <li key={`${r.kind}-${r.record_id}-${r.pet_id}`} className="rounded-xl border border-slate-200">
+                        <ReminderRow reminder={r} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            );
+          })}
         </div>
       </Modal>
     </div>

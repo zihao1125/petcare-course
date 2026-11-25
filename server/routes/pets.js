@@ -59,7 +59,7 @@ router.get('/reminders', (req, res) => {
       WHERE p.user_id = ? AND vt.followup_date IS NOT NULL
         AND date(vt.followup_date) <= date('now', 'localtime', '+7 day')
      ORDER BY due_date ASC
-     LIMIT 30`,
+     LIMIT 100`,
     [req.user.id, req.user.id, req.user.id]
   );
   const today = new Date();

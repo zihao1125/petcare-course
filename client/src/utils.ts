@@ -78,6 +78,27 @@ export function dueInfo(dateStr?: string | null) {
   return { text: `${days} 天后`, className: 'bg-slate-100 text-slate-500' };
 }
 
+export function dueGroup(daysLeft: number): 'overdue' | 'today' | 'soon' {
+  if (daysLeft < 0) return 'overdue';
+  if (daysLeft === 0) return 'today';
+  return 'soon';
+}
+
+export function reminderTarget(reminder: { kind: string; pet_id: number; record_id: number }) {
+  if (reminder.kind === 'followup') {
+    return { tab: 'visits' as const, record: `visit-${reminder.record_id}`, label: '复诊' };
+  }
+  if (reminder.kind === 'deworming') {
+    return { tab: 'prevention' as const, record: `deworm-${reminder.record_id}`, label: '驱虫' };
+  }
+  return { tab: 'prevention' as const, record: `vacc-${reminder.record_id}`, label: '疫苗' };
+}
+
+export function reminderLink(reminder: { kind: string; pet_id: number; record_id: number }) {
+  const target = reminderTarget(reminder);
+  return `/pets/${reminder.pet_id}?tab=${target.tab}&record=${target.record}`;
+}
+
 export function fmtMoney(value?: number | null) {
   if (value === null || value === undefined) return '—';
   return `¥${Number(value).toFixed(2)}`;

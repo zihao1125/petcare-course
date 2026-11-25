@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import {
   Badge,
@@ -20,6 +20,7 @@ import { fmtDate } from '../utils';
 import type { AdminOverview, AdminUser } from '../types';
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<AdminOverview | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [q, setQ] = useState('');
@@ -118,7 +119,7 @@ export default function AdminDashboard() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold text-slate-900 md:text-2xl">用户管理</h1>
-        <p className="mt-1 text-sm text-slate-500">管理后台为只读查看业务数据，仅可执行账号管理操作</p>
+        <p className="mt-1 text-sm text-slate-500">点击用户条目即可进入其主页；管理后台为只读查看业务数据，仅可执行账号管理操作</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -171,7 +172,12 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody>
                   {users.map((user) => (
-                    <tr key={user.id} className="border-b border-slate-50">
+                    <tr
+                      key={user.id}
+                      onClick={() => navigate(`/admin/users/${user.id}`)}
+                      title="点击进入用户主页"
+                      className="cursor-pointer border-b border-slate-50 transition-colors hover:bg-slate-50"
+                    >
                       <td className="py-2.5 font-medium text-slate-800">{user.account}</td>
                       <td className="py-2.5 text-slate-600">{user.username}</td>
                       <td className="py-2.5 text-slate-600">{user.pet_count}</td>
@@ -182,10 +188,7 @@ export default function AdminDashboard() {
                         </Badge>
                       </td>
                       <td className="py-2.5">
-                        <div className="flex justify-end gap-2">
-                          <Link to={`/admin/users/${user.id}`} className={btnGhost}>
-                            查看
-                          </Link>
+                        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                           <button type="button" className={btnGhost} onClick={() => toggleStatus(user)}>
                             {user.status === 'active' ? '禁用' : '启用'}
                           </button>
@@ -213,7 +216,11 @@ export default function AdminDashboard() {
 
             <div className="space-y-3 md:hidden">
               {users.map((user) => (
-                <div key={user.id} className="rounded-xl border border-slate-200 p-3">
+                <div
+                  key={user.id}
+                  onClick={() => navigate(`/admin/users/${user.id}`)}
+                  className="cursor-pointer rounded-xl border border-slate-200 p-3 transition-colors hover:border-teal-300 hover:bg-slate-50"
+                >
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-slate-800">{user.account}</p>
@@ -226,10 +233,7 @@ export default function AdminDashboard() {
                       {user.status === 'active' ? '正常' : '已禁用'}
                     </Badge>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-3 text-sm">
-                    <Link to={`/admin/users/${user.id}`} className={btnGhost}>
-                      查看
-                    </Link>
+                  <div className="mt-3 flex flex-wrap gap-3 text-sm" onClick={(e) => e.stopPropagation()}>
                     <button type="button" className={btnGhost} onClick={() => toggleStatus(user)}>
                       {user.status === 'active' ? '禁用' : '启用'}
                     </button>

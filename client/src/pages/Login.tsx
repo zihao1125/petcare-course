@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
-import { btnPrimary, ErrorText, Field, inputCls, Spinner } from '../components/ui';
+import { btnPrimary, ErrorText, Field, inputCls, PasswordInput, Spinner } from '../components/ui';
 import type { Role, User } from '../types';
 
 export default function Login() {
@@ -107,9 +107,7 @@ export default function Login() {
               />
             </Field>
             <Field label="密码" required>
-              <input
-                className={inputCls}
-                type="password"
+              <PasswordInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="请输入密码"

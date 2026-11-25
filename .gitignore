@@ -8,5 +8,8 @@ uploads/pets/
 .DS_Store
 .vite/
 
+# 本地验收截图，不随项目提交
+.screenshots/
+
 # 课程作业文档，不随项目提交
 作业要求.docx

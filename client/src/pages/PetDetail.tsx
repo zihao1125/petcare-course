@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { Avatar, Badge, btnPrimary, btnSecondary, Card, ErrorText, Spinner } from '../components/ui';
-import { dueInfo, fmtDate, GENDER_LABEL, NEUTERED_LABEL, petMeta } from '../utils';
+import { dueInfo, fmtDate, GENDER_LABEL, NEUTERED_LABEL, petMeta, reminderTarget } from '../utils';
 import type {
   Deworming,
   HealthRecord,
@@ -164,10 +164,17 @@ export default function PetDetail() {
           <div className="mt-3 flex flex-wrap gap-2">
             {reminders.map((r) => {
               const due = dueInfo(r.due_date);
+              const target = reminderTarget(r);
               return (
-                <span key={`${r.kind}-${r.record_id}`} className={`rounded-full px-2.5 py-1 text-xs font-medium ${due.className}`}>
-                  {r.kind === 'vaccination' ? '疫苗' : r.kind === 'deworming' ? '驱虫' : '复诊'}：{r.title} · {due.text}
-                </span>
+                <button
+                  key={`${r.kind}-${r.record_id}`}
+                  type="button"
+                  onClick={() => openRecord(target.tab, target.record)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition hover:ring-2 hover:ring-teal-300 ${due.className}`}
+                  title="点击查看这条记录，可修改日期"
+                >
+                  {target.label}：{r.title} · {due.text}
+                </button>
               );
             })}
           </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import { btnPrimary, btnSecondary, ErrorText, Field, inputCls } from '../components/ui';
+import { btnPrimary, btnSecondary, ErrorText, Field, inputCls, PasswordInput } from '../components/ui';
 import type { SecurityQuestion } from '../types';
 
 export default function ForgotPassword() {
@@ -129,18 +129,14 @@ export default function ForgotPassword() {
               ))}
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="新密码" required hint="至少 6 位">
-                  <input
-                    className={inputCls}
-                    type="password"
+                  <PasswordInput
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     autoComplete="new-password"
                   />
                 </Field>
                 <Field label="确认新密码" required>
-                  <input
-                    className={inputCls}
-                    type="password"
+                  <PasswordInput
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
                     autoComplete="new-password"

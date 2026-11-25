@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
-import { btnPrimary, btnSecondary, ErrorText, Field, inputCls } from '../components/ui';
+import { btnPrimary, btnSecondary, ErrorText, Field, inputCls, PasswordInput } from '../components/ui';
 import { DEFAULT_QUESTION_KEYS, SECURITY_QUESTIONS } from '../securityQuestions';
 
 const ACCOUNT_RE = /^[A-Za-z0-9_\u4e00-\u9fa5]{3,20}$/;
@@ -138,9 +138,7 @@ export default function Register() {
                 />
               </Field>
               <Field label="密码" required hint="至少 6 位">
-                <input
-                  className={inputCls}
-                  type="password"
+                <PasswordInput
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="设置密码"
@@ -148,9 +146,7 @@ export default function Register() {
                 />
               </Field>
               <Field label="确认密码" required>
-                <input
-                  className={inputCls}
-                  type="password"
+                <PasswordInput
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   placeholder="再次输入密码"

@@ -12,6 +12,7 @@ import {
   Field,
   inputCls,
   Modal,
+  PasswordInput,
   SectionTitle
 } from '../components/ui';
 import { DEFAULT_QUESTION_KEYS, SECURITY_QUESTIONS, securityQuestionLabel } from '../securityQuestions';
@@ -217,9 +218,7 @@ export default function Settings() {
         <SectionTitle>修改密码</SectionTitle>
         <form onSubmit={changePassword} className="space-y-3">
           <Field label="原密码" required>
-            <input
-              type="password"
-              className={inputCls}
+            <PasswordInput
               value={pwd.oldPassword}
               onChange={(e) => setPwd((p) => ({ ...p, oldPassword: e.target.value }))}
               autoComplete="current-password"
@@ -227,18 +226,14 @@ export default function Settings() {
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="新密码" required>
-              <input
-                type="password"
-                className={inputCls}
+              <PasswordInput
                 value={pwd.newPassword}
                 onChange={(e) => setPwd((p) => ({ ...p, newPassword: e.target.value }))}
                 autoComplete="new-password"
               />
             </Field>
             <Field label="确认新密码" required>
-              <input
-                type="password"
-                className={inputCls}
+              <PasswordInput
                 value={pwd.confirm}
                 onChange={(e) => setPwd((p) => ({ ...p, confirm: e.target.value }))}
                 autoComplete="new-password"
@@ -318,9 +313,7 @@ export default function Settings() {
               <div className="mt-3 flex flex-wrap items-end gap-2">
                 <div className="min-w-[12rem] flex-1">
                   <Field label="输入密码确认">
-                    <input
-                      type="password"
-                      className={inputCls}
+                    <PasswordInput
                       value={deletePassword}
                       onChange={(e) => setDeletePassword(e.target.value)}
                       autoComplete="current-password"
@@ -377,9 +370,7 @@ export default function Settings() {
       >
         <form id="security-form" onSubmit={saveSecurityQuestions} className="space-y-3">
           <Field label="当前登录密码" required hint="修改密保问题需要验证当前密码">
-            <input
-              type="password"
-              className={inputCls}
+            <PasswordInput
               value={securityPassword}
               onChange={(e) => setSecurityPassword(e.target.value)}
               autoComplete="current-password"

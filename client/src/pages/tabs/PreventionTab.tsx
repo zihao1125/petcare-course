@@ -27,11 +27,13 @@ export default function PreventionTab({
   highlight?: string | null;
 }) {
   const [vaccOpen, setVaccOpen] = useState(false);
+  const [vaccEditingId, setVaccEditingId] = useState<number | null>(null);
   const [vaccForm, setVaccForm] = useState({ vaccine_name: '', dose_no: '', date: today(), next_due_date: '', note: '' });
   const [vaccError, setVaccError] = useState('');
   const [vaccBusy, setVaccBusy] = useState(false);
 
   const [wormOpen, setWormOpen] = useState(false);
+  const [wormEditingId, setWormEditingId] = useState<number | null>(null);
   const [wormForm, setWormForm] = useState({ type: '', date: today(), next_due_date: '', note: '' });
   const [wormError, setWormError] = useState('');
   const [wormBusy, setWormBusy] = useState(false);
@@ -44,6 +46,55 @@ export default function PreventionTab({
 
   const highlightCls = (key: string) =>
     highlight === key ? 'rounded-lg ring-2 ring-teal-300 bg-teal-50/60 px-2 -mx-2' : '';
+
+  const openVaccNew = () => {
+    setVaccEditingId(null);
+    setVaccForm({ vaccine_name: '', dose_no: '', date: today(), next_due_date: '', note: '' });
+    setVaccError('');
+    setVaccOpen(true);
+  };
+
+  const openVaccEdit = (record: Vaccination) => {
+    setVaccEditingId(record.id);
+    setVaccForm({
+      vaccine_name: record.vaccine_name,
+      dose_no: record.dose_no || '',
+      date: record.date,
+      next_due_date: record.next_due_date || '',
+      note: record.note || ''
+    });
+    setVaccError('');
+    setVaccOpen(true);
+  };
+
+  const closeVacc = () => {
+    setVaccOpen(false);
+    setVaccEditingId(null);
+  };
+
+  const openWormNew = () => {
+    setWormEditingId(null);
+    setWormForm({ type: '', date: today(), next_due_date: '', note: '' });
+    setWormError('');
+    setWormOpen(true);
+  };
+
+  const openWormEdit = (record: Deworming) => {
+    setWormEditingId(record.id);
+    setWormForm({
+      type: record.type,
+      date: record.date,
+      next_due_date: record.next_due_date || '',
+      note: record.note || ''
+    });
+    setWormError('');
+    setWormOpen(true);
+  };
+
+  const closeWorm = () => {
+    setWormOpen(false);
+    setWormEditingId(null);
+  };
 
   const submitVacc = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,12 +110,14 @@ export default function PreventionTab({
     }
     setVaccBusy(true);
     try {
-      await api(`/pets/${petId}/vaccinations`, {
-        method: 'POST',
-        body: { ...vaccForm, next_due_date: vaccForm.next_due_date || null }
-      });
+      const body = { ...vaccForm, next_due_date: vaccForm.next_due_date || null };
+      if (vaccEditingId) {
+        await api(`/pets/${petId}/vaccinations/${vaccEditingId}`, { method: 'PUT', body });
+      } else {
+        await api(`/pets/${petId}/vaccinations`, { method: 'POST', body });
+      }
       setVaccForm({ vaccine_name: '', dose_no: '', date: today(), next_due_date: '', note: '' });
-      setVaccOpen(false);
+      closeVacc();
       await reload();
     } catch (err) {
       setVaccError(err instanceof Error ? err.message : '保存失败');
@@ -87,12 +140,14 @@ export default function PreventionTab({
     }
     setWormBusy(true);
     try {
-      await api(`/pets/${petId}/dewormings`, {
-        method: 'POST',
-        body: { ...wormForm, next_due_date: wormForm.next_due_date || null }
-      });
+      const body = { ...wormForm, next_due_date: wormForm.next_due_date || null };
+      if (wormEditingId) {
+        await api(`/pets/${petId}/dewormings/${wormEditingId}`, { method: 'PUT', body });
+      } else {
+        await api(`/pets/${petId}/dewormings`, { method: 'POST', body });
+      }
       setWormForm({ type: '', date: today(), next_due_date: '', note: '' });
-      setWormOpen(false);
+      closeWorm();
       await reload();
     } catch (err) {
       setWormError(err instanceof Error ? err.message : '保存失败');
@@ -122,7 +177,7 @@ export default function PreventionTab({
   return (
     <div className="space-y-4">
       <Card>
-        <SectionTitle action={<button type="button" className={btnPrimary} onClick={() => setVaccOpen(true)}>＋ 添加疫苗</button>}>
+        <SectionTitle action={<button type="button" className={btnPrimary} onClick={openVaccNew}>＋ 添加疫苗</button>}>
           疫苗记录
         </SectionTitle>
         {data.vaccinations.length === 0 ? (
@@ -148,9 +203,14 @@ export default function PreventionTab({
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <Badge className={due.className}>{due.text}</Badge>
-                    <button type="button" className={btnGhost} onClick={() => removeVacc(v)}>
-                      删除
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button type="button" className={btnGhost} onClick={() => openVaccEdit(v)}>
+                        修改
+                      </button>
+                      <button type="button" className={btnGhost} onClick={() => removeVacc(v)}>
+                        删除
+                      </button>
+                    </div>
                   </div>
                 </li>
               );
@@ -160,7 +220,7 @@ export default function PreventionTab({
       </Card>
 
       <Card>
-        <SectionTitle action={<button type="button" className={btnPrimary} onClick={() => setWormOpen(true)}>＋ 添加驱虫</button>}>
+        <SectionTitle action={<button type="button" className={btnPrimary} onClick={openWormNew}>＋ 添加驱虫</button>}>
           驱虫记录
         </SectionTitle>
         {data.dewormings.length === 0 ? (
@@ -183,9 +243,14 @@ export default function PreventionTab({
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <Badge className={due.className}>{due.text}</Badge>
-                    <button type="button" className={btnGhost} onClick={() => removeWorm(d)}>
-                      删除
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button type="button" className={btnGhost} onClick={() => openWormEdit(d)}>
+                        修改
+                      </button>
+                      <button type="button" className={btnGhost} onClick={() => removeWorm(d)}>
+                        删除
+                      </button>
+                    </div>
                   </div>
                 </li>
               );
@@ -196,11 +261,11 @@ export default function PreventionTab({
 
       <Modal
         open={vaccOpen}
-        title="添加疫苗记录"
-        onClose={() => setVaccOpen(false)}
+        title={vaccEditingId ? '修改疫苗记录' : '添加疫苗记录'}
+        onClose={closeVacc}
         footer={
           <>
-            <button type="button" className={btnGhost} onClick={() => setVaccOpen(false)} disabled={vaccBusy}>
+            <button type="button" className={btnGhost} onClick={closeVacc} disabled={vaccBusy}>
               取消
             </button>
             <button type="submit" form="vacc-form" className={btnPrimary} disabled={vaccBusy}>
@@ -233,11 +298,11 @@ export default function PreventionTab({
 
       <Modal
         open={wormOpen}
-        title="添加驱虫记录"
-        onClose={() => setWormOpen(false)}
+        title={wormEditingId ? '修改驱虫记录' : '添加驱虫记录'}
+        onClose={closeWorm}
         footer={
           <>
-            <button type="button" className={btnGhost} onClick={() => setWormOpen(false)} disabled={wormBusy}>
+            <button type="button" className={btnGhost} onClick={closeWorm} disabled={wormBusy}>
               取消
             </button>
             <button type="submit" form="worm-form" className={btnPrimary} disabled={wormBusy}>

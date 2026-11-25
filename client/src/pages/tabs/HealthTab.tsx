@@ -37,6 +37,19 @@ const emptyHealth = {
   note: ''
 };
 
+type ChoiceKey = 'appetite' | 'water_intake' | 'stool' | 'urine' | 'vomiting' | 'mental_state';
+
+const CHOICES: Array<{ key: ChoiceKey; label: string; options: string[]; hint: string }> = [
+  { key: 'appetite', label: '饮食', options: ['正常', '减少', '拒食', '偏多'], hint: '吃了多少、食欲如何' },
+  { key: 'water_intake', label: '饮水', options: ['正常', '偏多', '偏少'], hint: '喝水比平时多还是少' },
+  { key: 'stool', label: '排便', options: ['正常', '偏软', '腹泻', '便秘', '带血'], hint: '大便的形状和次数' },
+  { key: 'urine', label: '排尿', options: ['正常', '偏多', '偏少', '排尿困难', '颜色异常'], hint: '尿量和排尿是否顺畅' },
+  { key: 'vomiting', label: '呕吐', options: ['无', '偶发', '频繁', '持续'], hint: '有没有吐、吐了几次' },
+  { key: 'mental_state', label: '精神状态', options: ['良好', '一般', '萎靡', '烦躁'], hint: '活泼程度、是否愿意活动' }
+];
+
+const emptyCustom = Object.fromEntries(CHOICES.map((c) => [c.key, false])) as Record<ChoiceKey, boolean>;
+
 function healthMeta(h: HealthRecord) {
   const pairs: Array<[string, string | number | null | undefined]> = [
     ['体温', h.temperature != null ? `${h.temperature}℃` : ''],
@@ -48,6 +61,90 @@ function healthMeta(h: HealthRecord) {
     ['精神', h.mental_state]
   ];
   return pairs.filter(([, v]) => v !== null && v !== undefined && v !== '').map(([k, v]) => `${k}：${v}`);
+}
+
+function unrecordedLabels(h: HealthRecord) {
+  return CHOICES.filter((choice) => {
+    const value = h[choice.key];
+    return value === null || value === undefined || value === '';
+  }).map((choice) => choice.label);
+}
+
+function QuickChoice({
+  label,
+  hint,
+  options,
+  value,
+  custom,
+  onChange,
+  onCustom,
+  onClear
+}: {
+  label: string;
+  hint: string;
+  options: string[];
+  value: string;
+  custom: boolean;
+  onChange: (value: string) => void;
+  onCustom: () => void;
+  onClear: () => void;
+}) {
+  const selected = options.includes(value);
+  const showInput = custom || (!!value && !selected);
+  return (
+    <div className="rounded-xl border border-slate-200 p-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium text-slate-700">{label}</span>
+        {value ? (
+          <button type="button" onClick={onClear} className="text-xs text-slate-400 hover:text-red-600">
+            清除
+          </button>
+        ) : (
+          <span className="text-xs text-slate-400">未记录</span>
+        )}
+      </div>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {options.map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={value === option}
+            onClick={() => onChange(value === option ? '' : option)}
+            className={`rounded-full border px-2.5 py-1 text-xs transition ${
+              value === option
+                ? 'border-teal-600 bg-teal-600 text-white'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-teal-300 hover:text-teal-800'
+            }`}
+          >
+            {option}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-pressed={showInput}
+          onClick={onCustom}
+          className={`rounded-full border px-2.5 py-1 text-xs transition ${
+            showInput
+              ? 'border-teal-600 bg-teal-50 text-teal-800'
+              : 'border-dashed border-slate-300 bg-white text-slate-500 hover:border-teal-300 hover:text-teal-800'
+          }`}
+        >
+          自行填写
+        </button>
+      </div>
+      {showInput && (
+        <input
+          className={`${inputCls} mt-2`}
+          value={value}
+          maxLength={50}
+          autoFocus
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={`${label}的其他情况，例如：只吃了一点点`}
+        />
+      )}
+      <p className="mt-1 text-[11px] text-slate-400">{hint}；不选表示未记录</p>
+    </div>
+  );
 }
 
 export default function HealthTab({
@@ -69,6 +166,7 @@ export default function HealthTab({
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ ...emptyHealth });
+  const [custom, setCustom] = useState({ ...emptyCustom });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -153,6 +251,7 @@ export default function HealthTab({
         }
       });
       setForm({ ...emptyHealth, record_date: today() });
+      setCustom({ ...emptyCustom });
       setOpen(false);
       await reload();
     } catch (err) {
@@ -285,6 +384,9 @@ export default function HealthTab({
                       ))}
                     </div>
                   )}
+                  {unrecordedLabels(h).length > 0 && (
+                    <p className="mt-1 text-xs text-slate-400">未记录：{unrecordedLabels(h).join('、')}</p>
+                  )}
                   {h.symptoms && <p className="mt-1 text-xs text-slate-600">症状：{h.symptoms}</p>}
                   {h.allergy_note && <p className="mt-1 text-xs text-red-600">过敏：{h.allergy_note}</p>}
                   {h.note && <p className="mt-1 text-xs text-slate-500">备注：{h.note}</p>}
@@ -314,49 +416,60 @@ export default function HealthTab({
           </>
         }
       >
-        <form id="health-form" onSubmit={submitHealth} className="grid gap-3 sm:grid-cols-2">
-          <Field label="记录日期" required>
-            <input type="date" className={inputCls} value={form.record_date} onChange={(e) => set('record_date', e.target.value)} />
-          </Field>
-          <Field label="体温（℃）">
-            <input type="number" step="0.1" className={inputCls} value={form.temperature} onChange={(e) => set('temperature', e.target.value)} placeholder="例如 38.6" />
-          </Field>
-          <Field label="饮食">
-            <input className={inputCls} value={form.appetite} onChange={(e) => set('appetite', e.target.value)} placeholder="正常 / 减少 / 拒食" />
-          </Field>
-          <Field label="饮水">
-            <input className={inputCls} value={form.water_intake} onChange={(e) => set('water_intake', e.target.value)} placeholder="正常 / 偏多 / 偏少" />
-          </Field>
-          <Field label="排便">
-            <input className={inputCls} value={form.stool} onChange={(e) => set('stool', e.target.value)} placeholder="正常 / 偏软 / 腹泻 / 便秘" />
-          </Field>
-          <Field label="排尿">
-            <input className={inputCls} value={form.urine} onChange={(e) => set('urine', e.target.value)} placeholder="正常 / 偏多 / 偏少" />
-          </Field>
-          <Field label="呕吐">
-            <input className={inputCls} value={form.vomiting} onChange={(e) => set('vomiting', e.target.value)} placeholder="无 / 偶发 / 频繁" />
-          </Field>
-          <Field label="精神状态">
-            <input className={inputCls} value={form.mental_state} onChange={(e) => set('mental_state', e.target.value)} placeholder="良好 / 一般 / 萎靡" />
-          </Field>
-          <div className="sm:col-span-2">
-            <Field label="症状描述">
-              <textarea className={inputCls} rows={2} value={form.symptoms} onChange={(e) => set('symptoms', e.target.value)} maxLength={1000} />
+        <form id="health-form" onSubmit={submitHealth} className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="记录日期" required>
+              <input type="date" className={inputCls} value={form.record_date} onChange={(e) => set('record_date', e.target.value)} />
+            </Field>
+            <Field label="体温（℃）">
+              <input type="number" step="0.1" className={inputCls} value={form.temperature} onChange={(e) => set('temperature', e.target.value)} placeholder="例如 38.6" />
             </Field>
           </div>
-          <div className="sm:col-span-2">
+          <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
+            下面这些情况点一下就能选；不用每项都填，没选的项会记为「未记录」，不会被当成正常。
+          </p>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {CHOICES.map((choice) => (
+              <QuickChoice
+                key={choice.key}
+                label={choice.label}
+                hint={choice.hint}
+                options={choice.options}
+                value={form[choice.key]}
+                custom={custom[choice.key]}
+                onChange={(value) => set(choice.key, value)}
+                onCustom={() => {
+                  setCustom((prev) => ({ ...prev, [choice.key]: true }));
+                  if (choice.options.includes(form[choice.key])) set(choice.key, '');
+                }}
+                onClear={() => {
+                  setCustom((prev) => ({ ...prev, [choice.key]: false }));
+                  set(choice.key, '');
+                }}
+              />
+            ))}
+          </div>
+          <div>
+            <Field label="症状描述 / 补充说明">
+              <textarea
+                className={inputCls}
+                rows={2}
+                value={form.symptoms}
+                onChange={(e) => set('symptoms', e.target.value)}
+                maxLength={1000}
+                placeholder="选填：还有什么想补充的，例如呕吐物颜色、排便次数"
+              />
+            </Field>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
             <Field label="过敏史">
               <input className={inputCls} value={form.allergy_note} onChange={(e) => set('allergy_note', e.target.value)} placeholder="药物或食物过敏情况" maxLength={500} />
             </Field>
-          </div>
-          <div className="sm:col-span-2">
             <Field label="备注">
-              <textarea className={inputCls} rows={2} value={form.note} onChange={(e) => set('note', e.target.value)} maxLength={500} />
+              <input className={inputCls} value={form.note} onChange={(e) => set('note', e.target.value)} placeholder="选填" maxLength={500} />
             </Field>
           </div>
-          <div className="sm:col-span-2">
-            <ErrorText>{error}</ErrorText>
-          </div>
+          <ErrorText>{error}</ErrorText>
         </form>
       </Modal>
     </div>

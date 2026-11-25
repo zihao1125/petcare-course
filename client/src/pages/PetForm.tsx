@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
+import DatePicker from '../components/DatePicker';
 import ImageDropzone from '../components/ImageDropzone';
 import {
   btnDanger,
@@ -11,6 +12,7 @@ import {
   ErrorText,
   Field,
   inputCls,
+  labelCls,
   SectionTitle,
   Spinner
 } from '../components/ui';
@@ -213,9 +215,11 @@ export default function PetForm() {
                 <option value="female">母</option>
               </select>
             </Field>
-            <Field label="生日">
-              <input type="date" className={inputCls} value={form.birthday} onChange={(e) => set('birthday', e.target.value)} />
-            </Field>
+            <div>
+              <span className={labelCls}>生日</span>
+              <DatePicker value={form.birthday} onChange={(v) => set('birthday', v)} placeholder="请选择生日" />
+              <span className="mt-1 block text-xs text-slate-400">可切换年份或月份快速定位</span>
+            </div>
             <Field label="绝育状态">
               <select className={inputCls} value={form.neutered} onChange={(e) => set('neutered', e.target.value)}>
                 <option value="unknown">未知</option>
