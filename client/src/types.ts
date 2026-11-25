@@ -193,3 +193,41 @@ export interface PetRecords {
 export interface PetDetailData extends PetRecords {
   pet: Pet;
 }
+
+export type ForumAttachmentKind = 'image' | 'video' | 'file';
+
+export interface ForumAttachment {
+  id: number;
+  url: string;
+  name: string;
+  kind: ForumAttachmentKind;
+  size: number;
+}
+
+export interface ForumAuthor {
+  id: number;
+  username: string;
+  role: Role;
+}
+
+export interface ForumPost {
+  id: number;
+  user_id: number;
+  title?: string | null;
+  content: string;
+  created_at: string;
+  author: ForumAuthor;
+  comment_count: number;
+  attachments: ForumAttachment[];
+}
+
+export interface ForumComment {
+  id: number;
+  post_id: number;
+  user_id: number;
+  parent_id?: number | null;
+  content: string;
+  created_at: string;
+  author: ForumAuthor;
+  reply_to?: { id: number; username: string } | null;
+}

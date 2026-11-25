@@ -4,7 +4,7 @@ import { all, get, run } from '../db/index.js';
 import { HttpError } from '../utils/http.js';
 import { text } from '../utils/validate.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { removePetFiles } from '../utils/files.js';
+import { removePetFiles, removeUserForumFiles } from '../utils/files.js';
 
 const router = express.Router();
 router.use(requireAuth, requireRole('admin'));
@@ -98,6 +98,7 @@ router.delete('/users/:id', (req, res) => {
   const user = findUser(Number(req.params.id));
   const pets = all('SELECT id FROM pets WHERE user_id = ?', [user.id]);
   for (const pet of pets) removePetFiles(pet.id);
+  removeUserForumFiles(user.id);
   run('DELETE FROM users WHERE id = ?', [user.id]);
   res.json({ ok: true });
 });

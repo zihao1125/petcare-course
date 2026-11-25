@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import bcrypt from 'bcryptjs';
-import { all, exec, get, run } from './index.js';
+import { all, exec, get, hasTable, run } from './index.js';
 import { config } from '../env.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,10 +32,23 @@ function migrateAccountColumn({ verbose }) {
   );
 }
 
+function migrateForumComments({ verbose }) {
+  if (!hasTable('forum_comments')) return;
+  const columns = all('PRAGMA table_info(forum_comments)');
+  if (!columns.some((column) => column.name === 'parent_id')) {
+    exec(
+      'ALTER TABLE forum_comments ADD COLUMN parent_id INTEGER REFERENCES forum_comments(id) ON DELETE CASCADE'
+    );
+    if (verbose) console.log('已为 forum_comments 添加 parent_id 字段');
+  }
+  exec('CREATE INDEX IF NOT EXISTS idx_forum_comments_parent ON forum_comments(parent_id)');
+}
+
 export function initDatabase({ verbose = true } = {}) {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   exec(schema);
   migrateAccountColumn({ verbose });
+  migrateForumComments({ verbose });
 
   const existing = get("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
   if (!existing) {

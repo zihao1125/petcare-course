@@ -9,7 +9,7 @@ import {
   validateSecurityQuestionSet
 } from '../utils/security.js';
 import { requireAuth, setAuthCookie, clearAuthCookie, publicUser } from '../middleware/auth.js';
-import { removePetFiles } from '../utils/files.js';
+import { removePetFiles, removeUserForumFiles } from '../utils/files.js';
 
 const router = express.Router();
 const ACCOUNT_RE = /^[A-Za-z0-9_\u4e00-\u9fa5]{3,20}$/;
@@ -299,6 +299,7 @@ router.post('/delete-account', requireAuth, (req, res) => {
   }
   const pets = all('SELECT id FROM pets WHERE user_id = ?', [user.id]);
   for (const pet of pets) removePetFiles(pet.id);
+  removeUserForumFiles(user.id);
   run('DELETE FROM users WHERE id = ?', [user.id]);
   clearAuthCookie(res);
   res.json({ ok: true });

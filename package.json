@@ -1,7 +1,7 @@
 {
   "name": "petcare-course",
   "private": true,
-  "version": "0.6.1",
+  "version": "0.8.0",
   "type": "module",
   "description": "宠知微 - 猫狗健康记录 PWA",
   "engines": {

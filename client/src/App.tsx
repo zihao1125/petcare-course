@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import PetForm from './pages/PetForm';
 import PetDetail from './pages/PetDetail';
 import Settings from './pages/Settings';
+import Forum from './pages/Forum';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUserDetail from './pages/AdminUserDetail';
 
@@ -114,6 +115,14 @@ export default function App() {
           <RequireUser>
             <PetDetail />
           </RequireUser>
+        }
+      />
+      <Route
+        path="/forum"
+        element={
+          <RequireAnyUser>
+            <Forum />
+          </RequireAnyUser>
         }
       />
       <Route

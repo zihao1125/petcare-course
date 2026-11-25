@@ -15,7 +15,7 @@ function PawLogo({ className = 'h-9 w-9' }: { className?: string }) {
   );
 }
 
-type IconName = 'home' | 'plus' | 'user' | 'users' | 'logout';
+type IconName = 'home' | 'plus' | 'user' | 'users' | 'forum' | 'logout';
 
 function Icon({ name, className = 'h-5 w-5' }: { name: IconName; className?: string }) {
   const paths: Record<IconName, ReactNode> = {
@@ -44,6 +44,12 @@ function Icon({ name, className = 'h-5 w-5' }: { name: IconName; className?: str
         <path d="M3 19c.6-3 2.8-4.6 6-4.6s5.4 1.6 6 4.6" />
         <path d="M15.5 5.2a3.2 3.2 0 0 1 0 5.6" />
         <path d="M17 14.8c2.3.4 3.8 1.8 4.3 4.2" />
+      </>
+    ),
+    forum: (
+      <>
+        <path d="M4 5.5h16v10.5H9.5L4 20V5.5Z" />
+        <path d="M8 9.5h8M8 13h5" />
       </>
     ),
     logout: (
@@ -95,11 +101,13 @@ export default function Layout({ children, admin = false }: { children: ReactNod
   const items = admin
     ? [
         { to: '/admin', label: '用户管理', icon: 'users' as const, end: true },
+        { to: '/forum', label: '交流论坛', icon: 'forum' as const, end: false },
         { to: '/settings', label: '账号设置', icon: 'user' as const, end: false }
       ]
     : [
         { to: '/', label: '我的宠物', icon: 'home' as const, end: true },
         { to: '/pets/new', label: '添加宠物', icon: 'plus' as const, end: false },
+        { to: '/forum', label: '交流论坛', icon: 'forum' as const, end: false },
         { to: '/settings', label: '账号设置', icon: 'user' as const, end: false }
       ];
 
@@ -175,6 +183,10 @@ export default function Layout({ children, admin = false }: { children: ReactNod
                 <Icon name="users" className="h-5 w-5" />
                 用户管理
               </NavLink>
+              <NavLink to="/forum" className={mobileNav}>
+                <Icon name="forum" className="h-5 w-5" />
+                论坛
+              </NavLink>
               <NavLink to="/settings" className={mobileNav}>
                 <Icon name="user" className="h-5 w-5" />
                 账号
@@ -189,6 +201,10 @@ export default function Layout({ children, admin = false }: { children: ReactNod
               <NavLink to="/pets/new" className={mobileNav}>
                 <Icon name="plus" className="h-5 w-5" />
                 添加
+              </NavLink>
+              <NavLink to="/forum" className={mobileNav}>
+                <Icon name="forum" className="h-5 w-5" />
+                论坛
               </NavLink>
               <NavLink to="/settings" className={mobileNav}>
                 <Icon name="user" className="h-5 w-5" />

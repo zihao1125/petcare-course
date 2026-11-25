@@ -124,7 +124,38 @@ CREATE TABLE IF NOT EXISTS dewormings (
   created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 
+CREATE TABLE IF NOT EXISTS forum_posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT,
+  content TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS forum_attachments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER NOT NULL REFERENCES forum_posts(id) ON DELETE CASCADE,
+  file_path TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('image', 'video', 'file')),
+  size INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS forum_comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER NOT NULL REFERENCES forum_posts(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  parent_id INTEGER REFERENCES forum_comments(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_pets_user ON pets(user_id);
+CREATE INDEX IF NOT EXISTS idx_forum_posts_user ON forum_posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_forum_attachments_post ON forum_attachments(post_id);
+CREATE INDEX IF NOT EXISTS idx_forum_comments_post ON forum_comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_forum_comments_user ON forum_comments(user_id);
 CREATE INDEX IF NOT EXISTS idx_security_user ON user_security_answers(user_id);
 CREATE INDEX IF NOT EXISTS idx_photos_pet ON pet_photos(pet_id);
 CREATE INDEX IF NOT EXISTS idx_weights_pet ON weight_records(pet_id);
